@@ -18,6 +18,7 @@ l <- list(1, "a", mtcars)
 l[[2]]
 l <- list(c(1,2), c("a", "b", "c"))
 l[[1]][1]
+l[[2]][1]
 a<-c(1, 2)
 class(a)
 class(a)<-"character"
