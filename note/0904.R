@@ -21,7 +21,6 @@ l[[1]][1]
 a<-c(1, 2)
 class(a)
 class(a)<-"character"
-a
 m[1, , drop = FALSE]
 matrix(1:9, nrow = 3, byrow = FALSE)
 m<-matrix(1:9, nrow = 3, byrow = TRUE)
