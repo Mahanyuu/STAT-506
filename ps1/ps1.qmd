@@ -1,0 +1,188 @@
+---
+title: "ps1"
+author: "mhanyu"
+format: html
+---
+
+## Problem 1
+
+1.a
+
+```{r}
+wine <- read.csv("wine/wine.data", sep=",", header=FALSE)
+wine <- data.frame(wine)
+colnames(wine) <- c("Class", "Alcohol", "Malic_acid", "Ash", "Alcalinity_of_ash", "Magnesium", "Total_phenols", "Flavanoids", "Nonflavanoid_phenols", "Proanthocyanins", "Color_intensity", "Hue", "OD280/OD315_of_diluted_wines", "Proline")
+```
+
+1.b
+
+```{r}
+resultb <- aggregate(Alcohol ~ Class, data = wine, FUN = length)
+colnames(resultb)[2] <- "Count"
+#rm(result)
+resultb
+```
+
+1.c.1
+
+```{r}
+#ctrl+alt+I to create a new code chunk
+library("ggplot2")
+ggplot(wine, aes(x = Alcohol, y = Color_intensity ))+
+  geom_point()
+cor(wine$Alcohol, wine$Color_intensity)
+```
+
+1.c.2 (modify with Chatgpt3.5)
+
+```{r}
+library(dplyr)
+corr_class <- wine %>%
+  group_by(Class) %>%
+  summarise(correlation = cor(Alcohol, Color_intensity))
+corr_class
+```
+Therefore, Class 1 has the highest correlation between alcohol and color_intensity. Class 2 has the lowest correlation.
+
+1.c.3
+
+```{r}
+color_sorted <- wine %>%
+  arrange(desc(Color_intensity))
+color_sorted
+head(color_sorted, n = 1)$Alcohol
+```
+1.c.4
+
+```{r}
+wine_subset_a <- wine %>%
+  filter(wine$Proanthocyanin > wine$Ash)
+percentage <- round(count(wine_subset_a)/count(wine)*100,2)
+paste(percentage, "%", sep = "")
+```
+1.d
+
+```{r}
+mean_class <- wine %>%
+  group_by(Class) %>%
+  summarize(across(everything(), mean))
+total_class <- wine %>%
+  summarize(across(-Class, mean))
+result <- bind_rows(mean_class, total_class)
+result
+```
+
+1.e
+Assit with Chatgpt
+
+```{r}
+#' t_test for multiple groups
+#'
+#' @param class It is a variable name for group_by
+#' @param Var It is a variable name for calculation the difference
+#' @param dataframe It is a dataset in dataframe form
+#' @return class, t-value and p-value
+#' @export
+#'
+#' @examples
+t_test <- function(class, Var, dataframe){
+  class_list <- list(unique(dataframe$class))
+  value_each_class <- dataframe %>%
+    group_by({{class}}) %>%
+    summarize(mean_value = mean({{Var}},na.rm = TRUE), class_size = n(),var_value = var({{Var}},na.rm = TRUE), .groups = 'drop' )
+  class_names <- value_each_class[[1]]
+  mean_values <- value_each_class[[2]]
+  class_sizes <- value_each_class[[3]]
+  var_values <- value_each_class[[4]]
+  com_class_index <- combn(class_names, 2)
+  com_class_df <- data.frame(
+    class_1 = class_names[com_class_index[1,]],
+    mean_1 = mean_values[com_class_index[1,]],
+    size_1 = class_sizes[com_class_index[1,]],
+    var_1 = var_values[com_class_index[1,]],
+    class_2 = class_names[com_class_index[2,]],
+    mean_2 = mean_values[com_class_index[2,]],
+    size_2 = class_sizes[com_class_index[2,]],
+    var_2 = var_values[com_class_index[2,]]
+  )
+  com_class_df$t_value=(com_class_df$mean_1-com_class_df$mean_2)/sqrt((com_class_df$var_1/com_class_df$size_1)
+        +(com_class_df$var_2 / com_class_df$size_2))
+  com_class_df$p_value=2*(1-pt(abs(com_class_df$t_value)
+                               ,com_class_df$size_1+com_class_df$size_2-2))
+  return(com_class_df[, c("class_1", "class_2", "t_value", "p_value")])
+}
+t_test(Class, Total_phenols, wine)
+t.test(Total_phenols~Class, data = wine[wine$Class == 1 | wine$Class == 2, ])
+t.test(Total_phenols~Class, data = wine[wine$Class == 1 | wine$Class == 3, ])
+t.test(Total_phenols~Class, data = wine[wine$Class == 2 | wine$Class == 3, ])
+```
+The p-value is significantly less than 0.01. So we can consider the level of phenols significantly differs across the three classes.
+
+2.a
+
+```{r}
+manager_df <- data.frame(read.csv("AskAManager.csv"))
+```
+
+2.b
+
+```{r}
+colnames(manager_df) <- c("Index", "Timestamp", "Age", "Industry", "Job", "Job_Clarification", "Annual_Salary", "Monetary_Compensation","Currency", "Other_Currency", "Additional_Income", "Country", "State", "City", "Year_of_Overall_Experience", "Year_of_Field_Experience", "Highest_Education", "Gender", "Race")
+manager_df
+```
+2.c
+
+```{r}
+manager_df_USD <- manager_df[manager_df["Currency"]=="USD", ]
+count_1 <- data.frame(
+  count_all = nrow(manager_df),
+  count_USD = nrow(manager_df_USD)
+)
+print(count_1)
+```
+2.d
+Assist with Chatgpt
+
+```{r}
+manager_df_USD_Adult <- manager_df_USD
+manager_df_USD_Adult$Currency <- droplevels(manager_df_USD_Adult$Currency)
+manager_df_USD_Adult$Age <- as.factor(manager_df_USD_Adult$Age)
+
+#reorder the levels of Year_of_Overall_Experience and Year_of_Field_Experience
+orders <- c("1 year or less", "2 - 4 years", "5-7 years", "8 - 10 years","11 - 20 years", "21 - 30 years", "31 - 40 years", "41 years or more")
+manager_df_USD_Adult$Year_of_Overall_Experience<-
+  factor(manager_df_USD_Adult$Year_of_Overall_Experience, levels = orders)
+
+# Remove the specific level
+manager_df_USD_Adult$Year_of_Field_Experience<-
+  factor(manager_df_USD_Adult$Year_of_Field_Experience, levels = orders)
+manager_df_USD_Adult<-manager_df_USD_Adult[manager_df_USD_Adult$Year_of_Field_Experience != 'College degree', ]
+manager_df_USD_Adult[as.numeric(as.numeric(manager_df_USD_Adult$Year_of_Overall_Experience)) >= as.numeric(manager_df_USD_Adult$Year_of_Field_Experience), ]
+manager_df_USD_Adult <- manager_df_USD_Adult[as.numeric(manager_df_USD_Adult$Age)!=7,]
+manager_df_USD_Adult <- droplevels(manager_df_USD_Adult)
+
+# Verify levels
+levels(manager_df_USD_Adult$Year_of_Field_Experience)
+levels(manager_df_USD_Adult$Year_of_Overall_Experience)
+levels(manager_df_USD_Adult$Age)
+
+#drop impossibility between age and year of overall experience, which means the upper bound of year range minus the lower bound of year in overall experience <18
+manager_df_USD_Adult <- manager_df_USD_Adult %>%
+  filter(as.numeric(Age)==1 & as.numeric(Year_of_Overall_Experience) < 3 | as.numeric(Age)==2 & as.numeric(Year_of_Overall_Experience) < 4 | as.numeric(Age)==3 & as.numeric(Year_of_Overall_Experience) < 7 | as.numeric(Age)==4 & as.numeric(Year_of_Overall_Experience) < 8)
+count_2 <- data.frame(
+  count_USD = nrow(manager_df_USD),
+  count_Adult = nrow(manager_df_USD_Adult)
+)
+count_2
+```
+```{r}
+manager_df_Salary <-manager_df_USD_Adult[manager_df_USD_Adult$Annual_Salary>=5000 & manager_df_USD_Adult$Annual_Salary<=390000,]
+count_3 <- data.frame(
+  count_USD = nrow(manager_df_USD_Adult),
+  count_Adult = nrow(manager_df_Salary)
+)
+count_3
+```
+According to https://dqydj.com/average-median-top-salary-percentiles/, I choose the minimun annual salary is the 1% salary percentile for United States in 2023 and the maximum annual salary is the 99% salary percentile for United States in 2023.
+
+
