@@ -163,6 +163,7 @@ manager_df_USD_Adult$Year_of_Overall_Experience<-
   factor(manager_df_USD_Adult$Year_of_Overall_Experience, levels = orders)
 
 # Remove the specific level
+
 manager_df_USD_Adult$Year_of_Field_Experience<-
   factor(manager_df_USD_Adult$Year_of_Field_Experience, levels = orders)
 manager_df_USD_Adult<-manager_df_USD_Adult[manager_df_USD_Adult$Year_of_Field_Experience != 'College degree', ]
@@ -171,13 +172,15 @@ manager_df_USD_Adult <- manager_df_USD_Adult[as.numeric(manager_df_USD_Adult$Age
 manager_df_USD_Adult <- droplevels(manager_df_USD_Adult)
 
 # Verify levels
-# levels(manager_df_USD_Adult$Year_of_Field_Experience)
-# levels(manager_df_USD_Adult$Year_of_Overall_Experience)
-# levels(manager_df_USD_Adult$Age)
+levels(manager_df_USD_Adult$Year_of_Field_Experience)
+levels(manager_df_USD_Adult$Year_of_Overall_Experience)
+levels(manager_df_USD_Adult$Age)
 
-#drop impossibility between age and year of overall experience, which means the upper bound of year range minus the lower bound of year in overall experience <18
+#drop impossibility between age and year of overall experience. So I drop the observations whose the upper bound of year range minus the lower bound of year in overall experience <18
+
 manager_df_USD_Adult <- manager_df_USD_Adult %>%
-  filter(as.numeric(Age)==1 & as.numeric(Year_of_Overall_Experience) < 3 | as.numeric(Age)==2 & as.numeric(Year_of_Overall_Experience) < 4 | as.numeric(Age)==3 & as.numeric(Year_of_Overall_Experience) < 7 | as.numeric(Age)==4 & as.numeric(Year_of_Overall_Experience) < 8)
+  filter(as.numeric(Age)==1 & as.numeric(Year_of_Overall_Experience) < 3 | as.numeric(Age)==2 & as.numeric(Year_of_Overall_Experience) < 4 | as.numeric(Age)==3 & as.numeric(Year_of_Overall_Experience) < 7 | as.numeric(Age)==4 | as.numeric(Age)==5 | as.numeric(Age)==6)
+
 count_2 <- data.frame(
   count_USD = nrow(manager_df_USD),
   count_Adult = nrow(manager_df_USD_Adult)
