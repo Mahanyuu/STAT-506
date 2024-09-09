@@ -199,7 +199,7 @@ count_3 <- data.frame(
 count_3
 ```
 
-According to https://dqydj.com/average-median-top-salary-percentiles/, I choose the minimun annual salary is the 1% salary percentile for United States in 2023 and the maximum annual salary is the 99% salary percentile for United States in 2023.
+According to https://dqydj.com/average-median-top-salary-percentiles/, I choose the minimun annual salary is the bottom 1% salary percentile for United States in 2023 and the maximum annual salary is the top i% salary percentile for United States in 2023.
 
 ### 2.f
 
