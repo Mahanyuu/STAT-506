@@ -4,9 +4,11 @@ author: "mhanyu"
 format: html
 ---
 
+# Problem Set 1
+
 ## Problem 1
 
-1.a
+### 1.a
 
 ```{r}
 wine <- read.csv("wine/wine.data", sep=",", header=FALSE)
@@ -14,7 +16,7 @@ wine <- data.frame(wine)
 colnames(wine) <- c("Class", "Alcohol", "Malic_acid", "Ash", "Alcalinity_of_ash", "Magnesium", "Total_phenols", "Flavanoids", "Nonflavanoid_phenols", "Proanthocyanins", "Color_intensity", "Hue", "OD280/OD315_of_diluted_wines", "Proline")
 ```
 
-1.b
+### 1.b
 
 ```{r}
 resultb <- aggregate(Alcohol ~ Class, data = wine, FUN = length)
@@ -23,7 +25,9 @@ colnames(resultb)[2] <- "Count"
 resultb
 ```
 
-1.c.1
+### 1.c
+
+### 1.c.1
 
 ```{r}
 #ctrl+alt+I to create a new code chunk
@@ -33,7 +37,7 @@ ggplot(wine, aes(x = Alcohol, y = Color_intensity ))+
 cor(wine$Alcohol, wine$Color_intensity)
 ```
 
-1.c.2 (modify with Chatgpt3.5)
+### 1.c.2 (modify with Chatgpt3.5)
 
 ```{r}
 library(dplyr)
@@ -42,9 +46,10 @@ corr_class <- wine %>%
   summarise(correlation = cor(Alcohol, Color_intensity))
 corr_class
 ```
+
 Therefore, Class 1 has the highest correlation between alcohol and color_intensity. Class 2 has the lowest correlation.
 
-1.c.3
+### 1.c.3
 
 ```{r}
 color_sorted <- wine %>%
@@ -52,7 +57,8 @@ color_sorted <- wine %>%
 color_sorted
 head(color_sorted, n = 1)$Alcohol
 ```
-1.c.4
+
+### 1.c.4
 
 ```{r}
 wine_subset_a <- wine %>%
@@ -60,6 +66,7 @@ wine_subset_a <- wine %>%
 percentage <- round(count(wine_subset_a)/count(wine)*100,2)
 paste(percentage, "%", sep = "")
 ```
+
 1.d
 
 ```{r}
@@ -72,8 +79,7 @@ result <- bind_rows(mean_class, total_class)
 result
 ```
 
-1.e
-Assit with Chatgpt
+### 1.e Assit with Chatgpt
 
 ```{r}
 #' t_test for multiple groups
@@ -116,21 +122,25 @@ t.test(Total_phenols~Class, data = wine[wine$Class == 1 | wine$Class == 2, ])
 t.test(Total_phenols~Class, data = wine[wine$Class == 1 | wine$Class == 3, ])
 t.test(Total_phenols~Class, data = wine[wine$Class == 2 | wine$Class == 3, ])
 ```
+
 The p-value is significantly less than 0.01. So we can consider the level of phenols significantly differs across the three classes.
 
-2.a
+## Problem2
+
+### 2.a
 
 ```{r}
 manager_df <- data.frame(read.csv("AskAManager.csv"))
 ```
 
-2.b
+### 2.b
 
 ```{r}
 colnames(manager_df) <- c("Index", "Timestamp", "Age", "Industry", "Job", "Job_Clarification", "Annual_Salary", "Monetary_Compensation","Currency", "Other_Currency", "Additional_Income", "Country", "State", "City", "Year_of_Overall_Experience", "Year_of_Field_Experience", "Highest_Education", "Gender", "Race")
 manager_df
 ```
-2.c
+
+### 2.c
 
 ```{r}
 manager_df_USD <- manager_df[manager_df["Currency"]=="USD", ]
@@ -140,12 +150,11 @@ count_1 <- data.frame(
 )
 print(count_1)
 ```
-2.d
-Assist with Chatgpt
+
+### 2.d Assist with Chatgpt
 
 ```{r}
 manager_df_USD_Adult <- manager_df_USD
-manager_df_USD_Adult$Currency <- droplevels(manager_df_USD_Adult$Currency)
 manager_df_USD_Adult$Age <- as.factor(manager_df_USD_Adult$Age)
 
 #reorder the levels of Year_of_Overall_Experience and Year_of_Field_Experience
@@ -162,9 +171,9 @@ manager_df_USD_Adult <- manager_df_USD_Adult[as.numeric(manager_df_USD_Adult$Age
 manager_df_USD_Adult <- droplevels(manager_df_USD_Adult)
 
 # Verify levels
-levels(manager_df_USD_Adult$Year_of_Field_Experience)
-levels(manager_df_USD_Adult$Year_of_Overall_Experience)
-levels(manager_df_USD_Adult$Age)
+# levels(manager_df_USD_Adult$Year_of_Field_Experience)
+# levels(manager_df_USD_Adult$Year_of_Overall_Experience)
+# levels(manager_df_USD_Adult$Age)
 
 #drop impossibility between age and year of overall experience, which means the upper bound of year range minus the lower bound of year in overall experience <18
 manager_df_USD_Adult <- manager_df_USD_Adult %>%
@@ -175,6 +184,9 @@ count_2 <- data.frame(
 )
 count_2
 ```
+
+### 2.e
+
 ```{r}
 manager_df_Salary <-manager_df_USD_Adult[manager_df_USD_Adult$Annual_Salary>=5000 & manager_df_USD_Adult$Annual_Salary<=390000,]
 count_3 <- data.frame(
@@ -183,6 +195,89 @@ count_3 <- data.frame(
 )
 count_3
 ```
+
 According to https://dqydj.com/average-median-top-salary-percentiles/, I choose the minimun annual salary is the 1% salary percentile for United States in 2023 and the maximum annual salary is the 99% salary percentile for United States in 2023.
 
+### 2.f
 
+```{r}
+ordered_levels <- c(
+  "", "High School", "Some college", "College degree", 
+  "Master's degree", "Professional degree (MD, JD, etc.)", "PhD"
+)
+manager_df_Salary$Highest_Education <- factor(manager_df_Salary$Highest_Education, levels = ordered_levels)
+lm_edu_return <- lm(Annual_Salary~Highest_Education+Year_of_Overall_Experience, data = manager_df_Salary)
+summary(lm_edu_return)
+```
+
+##Problem3
+
+### 3.a
+
+```{r}
+#' for test whether is Palindromic and return a reverse number
+#'
+#' @param x input the x as a numeric type
+#' @return list the first element is TRUE or FALSE, the next one is number in reverse
+
+isPalindromic <- function(x){
+  split_x <- unlist(strsplit(as.character(x),""))
+  len <- length(split_x)
+  
+  if (split_x[len]!='0' | x==0) {
+    reverse_x <- vector("character", len)
+    for (i in 1:len){
+      j = len - i+1
+      reverse_x[i]=split_x[j]
+    }}else{
+      reverse_x <- vector("character", len-1)
+      for(p in 2:len){
+        q = len-p+1
+        reverse_x[p]=split_x[q]
+      }
+    }
+
+  reverse_x <- as.numeric(paste(reverse_x, collapse=""))
+  if (reverse_x == x){
+    return(list(
+      isPalindromic <- TRUE,
+      reversed <- reverse_x
+    ))    
+  }else{
+    return(
+      list(
+        isPalindromic <- FALSE,
+        reversed <- reverse_x
+      )
+    )
+  }
+
+ }
+isPalindromic(1230)
+```
+
+### 3.b
+
+```{r}
+#' look for the next palindromic number strictly greater than the input
+#'
+#' @param x input a random number
+#' @return a number which is the next palindromic number
+nextPalindrome <- function(x){
+  while (!isPalindromic(x)[[1]]){
+    x <- x+1
+  }
+  return(x)
+}
+nextPalindrome(122)
+```
+
+### 3.c
+
+```{r}
+nextPalindrome(391)
+nextPalindrome(9928)
+nextPalindrome(19272719)
+nextPalindrome(109)
+nextPalindrome(2)
+```
