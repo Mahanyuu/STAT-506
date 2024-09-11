@@ -1,7 +1,7 @@
 ---
 title: "ps1"
 author: "mhanyu"
-format: pdf
+format: html
 ---
 
 # Problem Set 1
@@ -10,7 +10,7 @@ format: pdf
 
 ### 1.a
 
-```{r}
+```{r 1.a}
 wine <- read.csv("wine/wine.data", sep=",", header=FALSE)
 wine <- data.frame(wine)
 colnames(wine) <- c("Class", "Alcohol", "Malic_acid", "Ash", "Alcalinity_of_ash", "Magnesium", "Total_phenols", "Flavanoids", "Nonflavanoid_phenols", "Proanthocyanins", "Color_intensity", "Hue", "OD280/OD315_of_diluted_wines", "Proline")
@@ -18,7 +18,7 @@ colnames(wine) <- c("Class", "Alcohol", "Malic_acid", "Ash", "Alcalinity_of_ash"
 
 ### 1.b
 
-```{r}
+```{r 1.b}
 resultb <- aggregate(Alcohol ~ Class, data = wine, FUN = length)
 colnames(resultb)[2] <- "Count"
 #rm(result)
@@ -29,7 +29,7 @@ resultb
 
 ### 1.c.1
 
-```{r}
+```{r 1.c.1}
 #ctrl+alt+I to create a new code chunk
 library("ggplot2")
 ggplot(wine, aes(x = Alcohol, y = Color_intensity ))+
@@ -39,7 +39,7 @@ cor(wine$Alcohol, wine$Color_intensity)
 
 ### 1.c.2 (modify with Chatgpt3.5)
 
-```{r}
+```{r 1.c.2}
 library(dplyr)
 corr_class <- wine %>%
   group_by(Class) %>%
@@ -51,25 +51,24 @@ Therefore, Class 1 has the highest correlation between alcohol and color_intensi
 
 ### 1.c.3
 
-```{r}
+```{r 1.c.3}
 color_sorted <- wine %>%
   arrange(desc(Color_intensity))
-color_sorted
 head(color_sorted, n = 1)$Alcohol
 ```
 
 ### 1.c.4
 
-```{r}
+```{r 1.c.4}
 wine_subset_a <- wine %>%
   filter(wine$Proanthocyanin > wine$Ash)
 percentage <- round(count(wine_subset_a)/count(wine)*100,2)
 paste(percentage, "%", sep = "")
 ```
 
-1.d
+### 1.d
 
-```{r}
+```{r 1.d}
 mean_class <- wine %>%
   group_by(Class) %>%
   summarize(across(everything(), mean))
@@ -81,7 +80,7 @@ result
 
 ### 1.e Assit with Chatgpt
 
-```{r}
+```{r 1.e}
 #' t_test for multiple groups
 #'
 #' @param class It is a variable name for group_by
@@ -129,20 +128,19 @@ The p-value is significantly less than 0.01. So we can consider the level of phe
 
 ### 2.a
 
-```{r}
+```{r 2.a}
 manager_df <- data.frame(read.csv("AskAManager.csv"))
 ```
 
 ### 2.b
 
-```{r}
+```{r 2.b}
 colnames(manager_df) <- c("Index", "Timestamp", "Age", "Industry", "Job", "Job_Clarification", "Annual_Salary", "Monetary_Compensation","Currency", "Other_Currency", "Additional_Income", "Country", "State", "City", "Year_of_Overall_Experience", "Year_of_Field_Experience", "Highest_Education", "Gender", "Race")
-manager_df
 ```
 
 ### 2.c
 
-```{r}
+```{r 2.c}
 manager_df_USD <- manager_df[manager_df["Currency"]=="USD", ]
 count_1 <- data.frame(
   count_all = nrow(manager_df),
@@ -153,7 +151,7 @@ print(count_1)
 
 ### 2.d Assist with Chatgpt
 
-```{r}
+```{r 2.d}
 manager_df_USD_Adult <- manager_df_USD
 manager_df_USD_Adult$Age <- as.factor(manager_df_USD_Adult$Age)
 
@@ -167,17 +165,18 @@ manager_df_USD_Adult$Year_of_Overall_Experience<-
 manager_df_USD_Adult$Year_of_Field_Experience<-
   factor(manager_df_USD_Adult$Year_of_Field_Experience, levels = orders)
 manager_df_USD_Adult<-manager_df_USD_Adult[manager_df_USD_Adult$Year_of_Field_Experience != 'College degree', ]
-manager_df_USD_Adult[as.numeric(as.numeric(manager_df_USD_Adult$Year_of_Overall_Experience)) >= as.numeric(manager_df_USD_Adult$Year_of_Field_Experience), ]
+try = as.numeric(manager_df_USD_Adult$Year_of_Overall_Experience) >= as.numeric(manager_df_USD_Adult$Year_of_Field_Experience)
+manager_df_USD_Adult <- subset(manager_df_USD_Adult, try)
 manager_df_USD_Adult <- manager_df_USD_Adult[as.numeric(manager_df_USD_Adult$Age)!=7,]
 manager_df_USD_Adult <- droplevels(manager_df_USD_Adult)
 
 # Verify levels
-levels(manager_df_USD_Adult$Year_of_Field_Experience)
-levels(manager_df_USD_Adult$Year_of_Overall_Experience)
-levels(manager_df_USD_Adult$Age)
+# levels(manager_df_USD_Adult$Year_of_Field_Experience)
+# levels(manager_df_USD_Adult$Year_of_Overall_Experience)
+# levels(manager_df_USD_Adult$Age)
 
 #drop impossibility between age and year of overall experience. So I drop the observations whose the upper bound of year range minus the lower bound of year in overall experience <18
-
+# 
 manager_df_USD_Adult <- manager_df_USD_Adult %>%
   filter(as.numeric(Age)==1 & as.numeric(Year_of_Overall_Experience) < 3 | as.numeric(Age)==2 & as.numeric(Year_of_Overall_Experience) < 4 | as.numeric(Age)==3 & as.numeric(Year_of_Overall_Experience) < 7 | as.numeric(Age)==4 | as.numeric(Age)==5 | as.numeric(Age)==6)
 
@@ -190,7 +189,7 @@ count_2
 
 ### 2.e
 
-```{r}
+```{r 2.e}
 manager_df_Salary <-manager_df_USD_Adult[manager_df_USD_Adult$Annual_Salary>=5000 & manager_df_USD_Adult$Annual_Salary<=390000,]
 count_3 <- data.frame(
   count_USD = nrow(manager_df_USD_Adult),
@@ -203,7 +202,7 @@ According to https://dqydj.com/average-median-top-salary-percentiles/, I choose 
 
 ### 2.f
 
-```{r}
+```{r 2.f}
 ordered_levels <- c(
   "", "High School", "Some college", "College degree", 
   "Master's degree", "Professional degree (MD, JD, etc.)", "PhD"
@@ -213,11 +212,11 @@ lm_edu_return <- lm(Annual_Salary~Highest_Education+Year_of_Overall_Experience, 
 summary(lm_edu_return)
 ```
 
-##Problem3
+## Problem3
 
 ### 3.a
 
-```{r}
+```{r 3.a}
 #' for test whether is Palindromic and return a reverse number
 #'
 #' @param x input the x as a numeric type
@@ -261,7 +260,7 @@ isPalindromic(1230)
 
 ### 3.b
 
-```{r}
+```{r 3.b}
 #' look for the next palindromic number strictly greater than the input
 #'
 #' @param x input a random number
@@ -277,7 +276,7 @@ nextPalindrome(122)
 
 ### 3.c
 
-```{r}
+```{r 3.c}
 nextPalindrome(391)
 nextPalindrome(9928)
 nextPalindrome(19272719)
