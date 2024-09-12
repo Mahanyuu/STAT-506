@@ -1,8 +1,11 @@
 ---
 title: "ps1"
 author: "mhanyu"
-format: html
+format:
+  html:
+    embed-resources: true
 ---
+
 [My Github](https://github.com/Mahanyuu/STAT-506/)
 
 # Problem Set 1
