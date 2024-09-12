@@ -267,6 +267,7 @@ isPalindromic(1230)
 #' @param x input a random number
 #' @return a number which is the next palindromic number
 nextPalindrome <- function(x){
+  x<-x+1
   while (!isPalindromic(x)[[1]]){
     x <- x+1
   }
