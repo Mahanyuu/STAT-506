@@ -158,7 +158,85 @@ $$
 
 Therefore, the expectation of dice game is equal to 0.66667, which is closed to the mean of billion times of Monte Carlo, which is 0.6666724. In this way, it is a fair game.
 
-```{r}
-cars <- read.csv('')
+## Problem 2
+
+### 2.a
+
+```{r 2.a}
+cars <- read.csv('data/cars.csv')
+colnames(cars) <- c("height", "length", "width", "driveline", "engine_type", "hybrid", "forward_gears", "transmission", "city_mpg", "fuel_type", "highway_mpg", "classification", "ID", "make", "model_year", "year", "horsepower", "torque")
 ```
+
+### 2.b
+
+```{r 2.b}
+cars_gasoline <- cars[cars["fuel_type"]=="Gasoline", ]
+```
+
+### 2.c
+```{r 2.c}
+#boxplot
+boxplot(cars_gasoline$highway_mpg,main = "Highway MPG Boxplot", horizontal = TRUE)
+#tranform
+cars_gasoline$highway_mpg_log <- log(cars_gasoline$highway_mpg)
+
+hist(
+  cars_gasoline$highway_mpg_log,
+  main = "The distribution of highway gas mileage",
+  xlab = "highway_mpg",
+  col = "lightblue"
+)
+qqnorm(cars_gasoline$highway_mpg_log)
+qqline(cars_gasoline$highway_mpg_log, col="red")
+boxplot(cars_gasoline$highway_mpg_log,main = "Highway LOG Boxplot", horizontal = TRUE)
+#drop anomalies
+outlier <- boxplot.stats(cars_gasoline$highway_mpg_log)$out
+cars_highway_cleaned <- cars_gasoline[!cars_gasoline$highway_mpg_log %in% outlier, ]
+boxplot(cars_highway_cleaned$highway_mpg_log,main = "Highway non-Anomaly LOG Boxplot", horizontal = TRUE)
+
+hist(
+  cars_highway_cleaned$highway_mpg_log,
+  main = "The distribution of log highway gas mileage",
+  xlab = "highway_mpg",
+  col = "lightblue"
+)
+qqnorm(cars_highway_cleaned$highway_mpg_log)
+qqline(cars_highway_cleaned$highway_mpg_log, col="red")
+```
+I choose to drop the anomalies by boxplot and log the highway gas mileage. This is because the number of highway gas mileage is scattered and large. After log, it will become more centralized so that more closed to normal distribution.
+
+### 2.d
+```{r 2.d}
+cars_highway_cleaned$year_category <- as.factor(cars_highway_cleaned$year)
+cars_highway_cleaned$torque_log <- log(cars_highway_cleaned$torque)
+model_1 <- lm(highway_mpg_log ~ torque_log+horsepower+height+length+width+year_category,data = cars_highway_cleaned)
+summary(model_1)
+
+```
+The result shows that torque has significantly negative effect on MPG on the highway at 1% level. I also choose to log the torque because torque is large and continuous data. And if the predictor of interest and dependent variable are logged, it is more clear to interpret.
+
+For estimator, with the control of three dimensions, released year and the horsepower, when the torque increases by 100%, the MPG on the highway will significantly decrease by 66.5% at 1% level.
+
+### 2.e
+
+```{r}
+library(interactions)
+mod <- lm(highway_mpg_log ~ torque+horsepower+height+length+width+year_category+torque*horsepower,data = cars_highway_cleaned)
+interact_plot(mod, pred = torque, modx = horsepower , at = list(year_category="2010"))
+```
+The default choice for different values in horsepower is mean, mean+1sd and mean-1sd. I think it makes sense because the mean provides a central tendency and 68% of data points lie in a normal distribution. Therefore, it is a reasonable choice because it can reflect common and most situation.
+
+### 2.f
+
+```{r 2.f}
+design_matrix <- model.matrix(model_1, data = cars_highway_cleaned)
+beta_hat <- solve(t(design_matrix)%*%design_matrix)%*%t(design_matrix)%*%cars_highway_cleaned$highway_mpg_log
+beta_hat <- as.vector(beta_hat)
+names(beta_hat) <- names(model_1$coefficients)
+print(beta_hat)
+print(model_1$coefficients)
+all.equal(beta_hat, model_1$coefficients)
+
+```
+I did get the same result as prior.
 
