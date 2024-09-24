@@ -124,6 +124,7 @@ for (i in c(3, 3000)){
 ```
 ### 1.d
 ```{r 1.d}
+library(microbenchmark)
 microbenchmark(
   play_dice_loop(1000),
   play_dice_vector(1000),
@@ -213,9 +214,9 @@ model_1 <- lm(highway_mpg_log ~ torque_log+horsepower+height+length+width+year_c
 summary(model_1)
 
 ```
-The result shows that torque has significantly negative effect on MPG on the highway at 1% level. I also choose to log the torque because torque is large and continuous data. And if the predictor of interest and dependent variable are logged, it is more clear to interpret.
+The result shows that torque has significantly negative effect on MPG on the highway at 0.1% level. I also choose to log the torque because torque is large and continuous data. And if the predictor of interest and dependent variable are logged, it is more clear to interpret.
 
-For estimator, with the control of three dimensions, released year and the horsepower, when the torque increases by 100%, the MPG on the highway will significantly decrease by 66.5% at 1% level.
+For estimator, with the control of three dimensions, released year and the horsepower, when the torque increases by 100%, the MPG on the highway will significantly decrease by 66.5% at 0.1% level.
 
 ### 2.e
 
