@@ -137,7 +137,7 @@ microbenchmark(
 )
 ```
 summary:
-Vector and table are both quicky. The vector is little faster than table. Vectorization always comes first because I use the sum and filter condition built-in R. Table also works well. Apply is the third fastest one. It works better than loop. But it is still very low. The loop works worst. This is because none of functions uses here.
+Running either Vector or table is both quickly. The vector is little faster than table. Vectorization always comes first because I use the sum and filter condition built-in R. Table also works well. Apply is the third fastest one. It works better than loop. But it is still very low. The loop works worst. This is because none of functions uses here.
 
 ### 1.e
 ```{r 1.e}
