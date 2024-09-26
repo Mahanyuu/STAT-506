@@ -47,6 +47,7 @@ play_dice_loop(2)
 ```
 
 ### 1.a.2 Play_dice_vector
+
 ```{r 1.a.2}
 #' play_dice_vector: The function is based on built-in R vectorized functions.
 #' It costs 2 to play.
@@ -63,6 +64,7 @@ play_dice_vector(6)
 ```
 
 ### 1.a.3 Play_dice_table
+
 ```{r 1.a.3}
 #' play_dice_table: Using table to do the exercise
 #' @param x the number of dice
@@ -82,6 +84,7 @@ play_dice_vector(5)
 ```
 
 ### 1.a.4 Play_dice_apply
+
 ```{r 1.a.4}
 play_dice_apply <- function(x){
   cost <- 2
@@ -100,6 +103,7 @@ play_dice_apply(5)
 ```
 
 ### 1.b
+
 ```{r 1.b}
 for (i in c(3, 3000)){
   cat("play_dice_loop(",i,"): ", play_dice_loop(i),"\n")
@@ -109,7 +113,9 @@ for (i in c(3, 3000)){
 }
 
 ```
+
 ### 1.c
+
 ```{r}
 for (i in c(3, 3000)){
   set.seed(506)
@@ -122,7 +128,9 @@ for (i in c(3, 3000)){
   cat("play_dice_apply(",i,"): ",play_dice_apply(i),"\n")
 }
 ```
+
 ### 1.d
+
 ```{r 1.d}
 library(microbenchmark)
 microbenchmark(
@@ -140,6 +148,7 @@ summary:
 Running either Vector or table is both quickly. The vector is little faster than table. Vectorization always comes first because I use the sum and filter condition built-in R. Table also works well. Apply is the third fastest one. It works better than loop. But it is still very low. The loop works worst. This is because none of functions uses here.
 
 ### 1.e
+
 ```{r 1.e}
 mean_billion_times <- play_dice_vector(1000000000)/1000000000
 Expectation_play_dice <- 1/6*(10+6)-2
@@ -207,6 +216,7 @@ qqline(cars_highway_cleaned$highway_mpg_log, col="red")
 I choose to drop the anomalies by boxplot and log the highway gas mileage. This is because the number of highway gas mileage is scattered and large. After log, it will become more centralized so that more closed to normal distribution.
 
 ### 2.d
+
 ```{r 2.d}
 cars_highway_cleaned$year_category <- as.factor(cars_highway_cleaned$year)
 cars_highway_cleaned$torque_log <- log(cars_highway_cleaned$torque)
