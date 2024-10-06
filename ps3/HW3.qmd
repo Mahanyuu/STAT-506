@@ -13,13 +13,297 @@ library(foreign)
 getwd()
 DEMO_D <- read.xport("../data/DEMO_D.XPT")
 VIX_D <- read.xport("../data/VIX_D.XPT")
+data_merge <- merge(x = DEMO_D, y = VIX_D, by = "SEQN") #inner join
+dim(data_merge)
+# The number of rows is 6980, which is consistent with answer in a
+# colSums(is.na(data_merge)) check whether only keep the matching rows
+```
+## 1.b
+```{r 1.b}
+library(dplyr)
+library(knitr)
+library(scales) 
+data_merge <- data_merge %>%
+  mutate(
+    AGE_GROUP = case_when(
+      (RIDAGEYR>=0) & (RIDAGEYR<10) ~ "0-9",
+      (RIDAGEYR>=10) & (RIDAGEYR<20) ~ "10-19",
+      (RIDAGEYR>=20) & (RIDAGEYR<30) ~ "20-29",
+      (RIDAGEYR>=30) & (RIDAGEYR<40) ~ "30-39",
+      (RIDAGEYR>=40) & (RIDAGEYR<50) ~ "40-49",
+      (RIDAGEYR>=50) & (RIDAGEYR<60) ~ "50-59",
+      (RIDAGEYR>=60) & (RIDAGEYR<70) ~ "60-69",
+      (RIDAGEYR>=70) & (RIDAGEYR<80) ~ "70-79",
+      (RIDAGEYR>=80) & (RIDAGEYR<=85) ~ "80-85",
+      #Individuals 85 and over are topcoded at 85 years of age.
+    )
+  )#classify different age group with ageyear
+
+#data_merge[c("AGE_GROUP", "RIDAGEYR")] check for age group
+
+#drop NA or missing and replace 1 or 2 with T OR F
+
+normal_distance <- data_merge %>%
+  filter(VIQ220 ==1 | VIQ220 == 2) %>%
+  mutate(
+      VIQ220_T = case_when(
+      VIQ220==1 ~ TRUE,
+      VIQ220==2 ~ FALSE
+  )
+)
+colnames(normal_distance)
+summary_distance <- normal_distance %>%
+  group_by(AGE_GROUP) %>%
+  summarize(
+    Distance_Percent = percent(sum(as.numeric(VIQ220_T))/n(), accuracy = 0.01)
+  )
+
+#check
+normal_distance_c <- normal_distance[normal_distance["AGE_GROUP"]=="10-19", ]
+percentage_0 <- sum(normal_distance_c$VIQ220_T)/nrow(normal_distance_c)
+#nice tables
+kable(summary_distance, caption = "Percantage of Distance by Age Group", format = "html")
 ```
 
-You can add options to executable code like this 
+## 1.c
 
-```{r}
-#| echo: false
-2 * 2
+```{r 1.c}
+normal_distance$VIQ220_T <- as.factor(normal_distance$VIQ220_T)
+#model_1
+distance_logistic_1 <- glm(VIQ220_T~RIDAGEYR, data=normal_distance, family = "binomial")
+#model_2
+normal_distance$RIAGENDR <- as.factor(normal_distance$RIAGENDR)
+normal_distance$RIDRETH1 <- as.factor(normal_distance$RIDRETH1)
+distance_logistic_2 <- glm(VIQ220_T~RIDAGEYR+RIAGENDR+RIDRETH1, data=normal_distance, family = "binomial")
+#model_3
+distance_logistic_3 <- glm(VIQ220_T~RIDAGEYR+RIAGENDR+RIDRETH1+INDFMPIR, data=na.omit(normal_distance[c("VIQ220_T", "RIDAGEYR", "RIAGENDR", "RIDRETH1", "INDFMPIR")]), family = "binomial")
+#pseudo-R^2
+pseudo_r_squared <- function(model){
+  return(1-model$deviance/model$null.deviance)
+}
+#summary
+distance_summary <- data.frame(
+  Model = c("distance_logistic_1", "distance_logistic_2", "distance_logistic_3"),
+  
+  Sample_Size = c(nrow(normal_distance), nrow(normal_distance), nrow(na.omit(normal_distance[c("VIQ220_T", "RIDAGEYR", "RIAGENDR", "RIDRETH1", "INDFMPIR")]))),
+  
+  Intercept = exp(c(summary(distance_logistic_1)$coefficients[[1,"Estimate"]],summary(distance_logistic_2)$coefficients[[1,"Estimate"]],summary(distance_logistic_3)$coefficients[[1,"Estimate"]])),
+  
+  Age = exp(c(summary(distance_logistic_1)$coefficients[[2, "Estimate"]],summary(distance_logistic_2)$coefficients[[2, "Estimate"]],summary(distance_logistic_3)$coefficients[[2,"Estimate"]])),
+  
+  Gender_Male = exp(c(NA, summary(distance_logistic_2)$coefficients[[3, "Estimate"]],
+                  summary(distance_logistic_3)$coefficients[[3,"Estimate"]])),
+  
+  Race_Other_Hispanic = exp(c(NA, summary(distance_logistic_2)$coefficients[[4, "Estimate"]],
+                          summary(distance_logistic_3)$coefficients[[4,"Estimate"]])),
+  
+  Race_N_Hispanic_White=exp(c(NA, summary(distance_logistic_2)$coefficients[[5, "Estimate"]],
+                          summary(distance_logistic_3)$coefficients[[5,"Estimate"]])),
+  
+Race_Non_Hispanic_Black=exp(c(NA, summary(distance_logistic_2)$coefficients[[6, "Estimate"]],
+                          summary(distance_logistic_3)$coefficients[[6,"Estimate"]])),
+
+  Race_Other_Race = exp(c(NA, summary(distance_logistic_2)$coefficients[[7, "Estimate"]],
+                      summary(distance_logistic_3)$coefficients[[7,"Estimate"]])),
+
+  #poverty income ratio
+  Family_PIR = exp(c(NA, NA, summary(distance_logistic_3)$coefficients[[8,"Estimate"]])),
+  
+  Pseudo_R = c(pseudo_r_squared(distance_logistic_1), pseudo_r_squared(distance_logistic_2), pseudo_r_squared(distance_logistic_3)),
+  AIC = c(AIC(distance_logistic_1), AIC(distance_logistic_2), AIC(distance_logistic_3))
+)
+
+#kable
+distance_summary_k <- kable(distance_summary,format = "html",
+      digit = 3,caption="Summary for 3 Distance Logistic Regressions")
+distance_summary_k
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## 1.d
+From the third model, I believe the odds of women has significantly more probability to wear glasses or contact lenses distance than the odds of men at 0.01% level. As a woman, the odds of wearing glasses or contact lenses for distance significantly increases by 67.6% compared to men.(exp(Gender_Male) = 1.676)
+
+```{r 1.d}
+#Chisq-test
+contingency_table <- table(normal_distance$VIQ220_T, normal_distance$RIAGENDR)
+chisq_test <- chisq.test(contingency_table)
+chisq_test
+```
+The same results appear by Chi-squared test. The p-value is very small and less than 0.001 so we can reject the null hypothesis and there is a difference between gender.
+
+# P2
+## 2.a
+
+```{r 2.a}
+library(DBI)
+library(RSQLite)
+sakila <- dbConnect(RSQLite::SQLite(), "../data/sakila_master.db")
+#tables
+dbListTables(sakila)
+gg <- function(query){
+  dbGetQuery(sakila, query)
+}
+#release_year
+gg("
+    SELECT 	release_year, COUNT(DISTINCT film_id)
+    FROM film
+    HAVING release_year = MIN(release_year)
+")
+```
+## 2.b
+
+```{r 2.b}
+#R
+category <- gg("
+SELECT category_id, name AS category_name
+FROM category
+   "
+)
+film <- gg("
+SELECT film_id, category_id
+FROM film_category
+           ")
+
+#left join two tables
+film_cate <-
+  left_join(film, category, by = "category_id")
+
+#group_by category_id
+category_summary <- film_cate %>%
+  group_by(category_id, category_name) %>%
+ summarize(film_number=n_distinct(film_id))
+
+#least common filter
+least_common_c <- category_summary[category_summary$film_number==min(category_summary$film_number), ]
+
+kable(least_common_c, caption = "Least Common Category", col.names = c("category_id", "least_common_category", "film_number"))
+```
+
+
+
+```{r 2.b}
+#SQL
+gg(
+  "
+  SELECT category_id, name AS least_common_category, film_number
+  FROM(
+    SELECT COUNT(DISTINCT film_id) film_number, category_id, name
+    FROM(
+        SELECT film_id, f.category_id, c.name
+        FROM FILM_CATEGORY AS f
+        LEFT JOIN CATEGORY AS c ON f.category_id = c.category_id
+    )a
+    GROUP BY category_id, name
+    )
+  WHERE film_number = (
+  SELECT MIN(film_number)
+  FROM(
+  SELECT COUNT(DISTINCT film_id) film_number, category_id, name
+    FROM(
+        SELECT film_id, f.category_id, c.name
+        FROM FILM_CATEGORY AS f
+        LEFT JOIN CATEGORY AS c ON f.category_id = c.category_id
+    )a
+    GROUP BY category_id, name
+  )
+  )
+  "
+)
+```
+## 2.c
+```{r 2.c}
+#R
+customer_country <- gg("
+  SELECT country_id, country, customer_id
+  FROM(
+      SELECT customer_id,co.country_id, country
+      FROM customer cu
+      LEFT JOIN address a on cu.address_id = a.address_id
+      LEFT JOIN city ci on ci.city_id = a.city_id
+      LEFT JOIN country co on ci.country_id=co.country_id
+  )b
+  ")
+cc_summary <- customer_country %>%
+  group_by(country_id, country) %>%
+  summarize(customer_number = n_distinct(customer_id))%>%
+  filter(customer_number==13)
+kable(cc_summary)
+```
+
+```{r 2.c}
+#SQL
+gg("
+SELECT country_id, country, customer_number
+FROM(
+  SELECT country_id, country, COUNT(DISTINCT customer_id) AS customer_number
+  FROM(
+      SELECT customer_id,co.country_id, country
+      FROM customer cu
+      LEFT JOIN address a on cu.address_id = a.address_id
+      LEFT JOIN city ci on ci.city_id = a.city_id
+      LEFT JOIN country co on ci.country_id=co.country_id
+  )b
+  GROUP BY country_id, country
+)c
+WHERE customer_number = 13
+   ")
+```
+# P3
+## 3.a
+```{r 3.a}
+US_500 <- read.csv("../data/us-500.csv")
+cat("Proportion of email addresses are hosted at a domain with TLD '.com': ", percent(sum(grepl("\\.com$", US_500$email))/nrow(US_500), 0.01))
+```
+## 3.b
+```{r 3.b}
+non_alphanumeric <- "[^a-zA-Z0-9.@]"
+cat("Proportion of email addresses have at least one non alphanumeric character in them: ",
+percent(sum(grepl(non_alphanumeric, US_500$email))/nrow(US_500), 0.01))
+```
+## 3.c
+```{r 3.c}
+#phone1 area code
+US_500$phone1_area_code <- substring(US_500$phone1, 1, 3)
+#phone2 area code
+US_500$phone2_area_code <- substring(US_500$phone2, 1, 3)
+all.equal(US_500$phone1_area_code, US_500$phone2_area_code)
+#Because the area codes of phone1 and phone2 are all equal to each other, so we only analyze phone1.
+area_summary <- US_500 %>%
+  group_by(phone1_area_code) %>%
+  summarize(phone1_count = n_distinct(phone1)) %>%
+  arrange(desc(phone1_count))%>%
+  slice(1:5)
+area_summary
+```
+
+## 3.d
+
+```{r 3.d}
+#filter for the address with apartment number
+US_500_Apt <- US_500[grepl("#[0-9]*$", US_500$address), ]
+#estract
+extract_apt <- regmatches(US_500_Apt$address, regexpr("#[0-9]*$", US_500_Apt$address))
+US_500_Apt$apt_num <-sub("^#", "", extract_apt)
+hist(log(as.numeric(US_500_Apt$apt_num)))
+```
+
+## 3.e
+
+```{r 3.e}
+leading_digit <- as.numeric(regmatches(US_500_Apt$apt_num,
+                                       regexpr("^[0-9]", US_500_Apt$apt_num)))
+leading_freq <- table(leading_digit)
+
+#check actual distribution
+hist(leading_digit,  breaks = seq(0.5, 9.5, by = 1))
+
+#probability of benford law
+benford_probs <- log10(1 + 1 / (1:9))
+
+#why difference?
+chisq_test <- chisq.test(leading_freq, p=benford_probs)
+chisq_test_1 <- chisq.test(leading_freq, length(leading_digit)*benford_probs)
+chisq_test
+chisq_test_1
+```
+The leading number of apartment does not follow the Benford's law. It is more like uniform distribution. For 1, it only shows at 11 times which doesn't reach 32.7 (30% of total). So I think the leading number of apartments don't pass as real number. Also, in Chi-squared test, we can also reject the null hypothesis and believe there is a difference between leading digit and real number as Benford's law.
+
