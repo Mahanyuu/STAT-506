@@ -1,0 +1,25 @@
+---
+title: "ps3"
+author: "mhanyu"
+format: html
+---
+
+# P1
+
+## 1.a
+
+```{r 1.a}
+library(foreign)
+getwd()
+DEMO_D <- read.xport("../data/DEMO_D.XPT")
+VIX_D <- read.xport("../data/VIX_D.XPT")
+```
+
+You can add options to executable code like this 
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
