@@ -155,7 +155,7 @@ gg("
 ```
 ## 2.b
 
-```{r 2.b}
+```{r 2.b.R}
 #R
 category <- gg("
 SELECT category_id, name AS category_name
@@ -184,7 +184,7 @@ kable(least_common_c, caption = "Least Common Category", col.names = c("category
 
 
 
-```{r 2.b}
+```{r 2.b.SQL}
 #SQL
 gg(
   "
@@ -214,7 +214,7 @@ gg(
 )
 ```
 ## 2.c
-```{r 2.c}
+```{r 2.d.R}
 #R
 customer_country <- gg("
   SELECT country_id, country, customer_id
@@ -233,7 +233,7 @@ cc_summary <- customer_country %>%
 kable(cc_summary)
 ```
 
-```{r 2.c}
+```{r 2.c.SQL}
 #SQL
 gg("
 SELECT country_id, country, customer_number
@@ -275,7 +275,8 @@ area_summary <- US_500 %>%
   group_by(phone1_area_code) %>%
   summarize(phone1_count = n_distinct(phone1)) %>%
   arrange(desc(phone1_count))%>%
-  slice(1:5)
+  slice(1:5)%>%
+  ungroup
 area_summary
 ```
 
@@ -299,15 +300,14 @@ leading_freq <- table(leading_digit)
 
 #check actual distribution
 hist(leading_digit,  breaks = seq(0.5, 9.5, by = 1))
-
+length(leading_digit)
 #probability of benford law
 benford_probs <- log10(1 + 1 / (1:9))
 
 #why difference?
 chisq_test <- chisq.test(leading_freq, p=benford_probs)
-chisq_test_1 <- chisq.test(leading_freq, length(leading_digit)*benford_probs)
+#chisq_test requires input probability and actual distribution instead of two number list without normalization
 chisq_test
-chisq_test_1
 ```
-The leading number of apartment does not follow the Benford's law. It is more like uniform distribution. For 1, it only shows at 11 times which doesn't reach 32.7 (30% of total). So I think the leading number of apartments don't pass as real number. Also, in Chi-squared test, we can also reject the null hypothesis and believe there is a difference between leading digit and real number as Benford's law.
+The leading number of apartment does not follow the Benford's law. It is more like uniform distribution. For 1, it only shows at 11 times which doesn't reach 32.7 (30% of total). So I think the leading number of apartments don't pass as real number. Also, in Chi-squared test, we can also reject the null hypothesis and believe there is a difference between leading digit and real number as Benford's law at 0.1% level.
 
