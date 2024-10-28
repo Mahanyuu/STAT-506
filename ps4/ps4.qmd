@@ -1,0 +1,260 @@
+---
+title: "ps3"
+author: "mhanyu"
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+---
+[My Github](https://github.com/Mahanyuu/STAT-506/)
+
+# PS1
+
+## 1.a
+```{r 1.a.1}
+library(dplyr)
+library(nycflights13)
+head(airports)
+
+#extract the destination with the number of flights under 10
+destination_under_10 <- flights%>%
+  group_by(dest)%>%
+  summarize(flights_num=n())%>%
+  filter(flights_num<10)%>%
+  ungroup()
+
+#exclude any destination with under 10 flights
+flights_cleaned <- flights %>%
+  filter(!dest %in% destination_under_10$dest)
+
+#calculte mediunm and median of departure delay
+table_1 <- flights_cleaned %>%
+  group_by(origin) %>%
+  summarize(mean_delay_dep = mean(dep_delay, na.rm=TRUE), 
+            median_delay_dep = median(dep_delay, na.rm=TRUE)) %>%
+  left_join(airports, by= c("origin"="faa")) %>%
+  rename(
+    origin_name = name
+  ) %>%
+  select(!c(lat, lon, alt, tz, dst, tzone, origin)) %>%
+  arrange(-mean_delay_dep) %>%
+  select(origin_name, everything()) %>%
+  tibble
+
+table_1
+
+
+```
+
+You can add options to executable code like this 
+
+```{r 1.a.2}
+#calculte mediunm and median of departure delay
+table_2 <- flights_cleaned %>%
+  group_by(origin) %>%
+  summarize(mean_delay_arr = mean(arr_delay, na.rm=TRUE), 
+            median_delay_arr = median(arr_delay, na.rm=TRUE)) %>%
+  left_join(airports, by= c("origin"="faa")) %>%
+  rename(
+    origin_name = name
+  ) %>%
+  select(!c(lat, lon, alt, tz, dst, tzone, origin)) %>%
+  arrange(-mean_delay_arr) %>%
+  select(origin_name, everything()) %>%
+  tibble
+
+table_2
+
+```
+
+## 1.b
+```{r 1.b}
+flights_speed <- flights %>%
+  mutate(
+    dep_minute = dep_time %% 100,
+    arr_minute = arr_time %% 100,
+    dep_hour = (dep_time - dep_minute)/100,
+    arr_hour = (arr_time - arr_minute)/100,
+    duration_hour = (arr_hour-dep_hour+24) %% 24,
+    duration_minute = arr_minute - dep_minute,
+    duration = duration_hour + duration_minute/60,
+    speed = ifelse(distance/duration>0, distance/duration, NA)
+    ) 
+
+speed_max <- flights_speed %>%
+  group_by(tailnum) %>%
+  summarize(speed_mean = mean(speed, na.rm = TRUE)) %>%
+  arrange(-speed_mean) %>%
+  head(1)
+
+speed_max_info <- flights_speed %>%
+  filter(tailnum == speed_max$tailnum) %>%
+  group_by(tailnum) %>%
+  summarize(flight_num = n()) %>%
+  left_join(planes, by = "tailnum")
+
+speed_max_info
+```
+
+# PS2
+```{r 2}
+#' request the average temperature for a given month
+#'
+#' @param month: Month, either a numeric 1-12 or a string. 
+#' @param year: A numeric year.
+#' @param data: The data set to obtain data from.
+#' @param celsius: Logically indicating whther the results should be in celsius. Default FALSE.
+#' @param average_fn: A function with which to compute the mean. Default is mean.
+#'
+#' @return a numeric vector of length 1.
+#' @export
+#'
+#' @examples
+get_temp <- function(month, year, data, celsius = FALSE, average_fn=mean){
+  # Sanitizing the input
+  # Check if the year is numeric
+  month_map <- c(
+  "1" = "Jan", "2" = "Feb", "3" = "Mar", "4" = "Apr", 
+  "5" = "May", "6" = "Jun", "7" = "Jul", "8" = "Aug", 
+  "9" = "Sep", "10" = "Oct", "11" = "Nov", "12" = "Dec",
+  "January" = "Jan", "Jan" = "Jan", "Febuary" = "Feb", "Feb" = "Feb", "March" = "Mar", "Mar" = "Mar", "April" = "Apr", "Apr" = "Apr", "May" = "May", "June" = "Jun", "Jun" = "Jun" ,"July" = "Jul", "Jul" = "Jul",  "August" = "Aug", "Aug" = "Aug", "September" = "Sep", "Sep" = "Sep", "October" = "Oct","Oct" = "Oct", "November" = "Nov","Nov" = "Nov", "December" = "Dec", "Dec" = "Dec"
+  )
+  standardized_month <- month_map[as.character(month)]
+  if (is.na(standardized_month)) {
+    stop("Error: Please input numeric value or character in 'Jan' or 'January' form for 'month'.")
+  }
+  if (!is.numeric(year)) {
+    stop("Error: Please input a numeric value for 'year'.")
+  }
+  
+  # Check if celsius is logical (TRUE or FALSE)
+  if (!is.logical(celsius)) {
+    stop("Error: Please input a logical value (TRUE/FALSE) for 'celsius'.")
+  }
+  
+  # Check if average_fn is a function
+  if (!is.function(average_fn)) {
+    stop("Error: Please input a function for 'average_fn'.")
+  }
+  
+  #filter
+  data_month <- data %>%
+    filter(month==standardized_month, year ==year)
+  average_temp <- data_month %>%
+    mutate(standardized_temp = ifelse(celsius, (temp-32)*5/9, temp)) %>%
+    summarize(mean_temp = average_fn(standardized_temp))
+  return(average_temp$mean_temp)
+    
+}
+nnmaps <- read.csv("chicago-nmmaps.csv")
+get_temp("Apr", 1999, data = nnmaps)
+get_temp("Apr", 1999, data = nnmaps, celsius = TRUE)
+get_temp(10, 1998, data = nnmaps, average_fn = median)
+get_temp(2, 2005, data = nnmaps)
+get_temp("November", 1999, data =nnmaps, celsius = TRUE,
+         average_fn = function(x) {
+           x %>% sort -> x
+           x[2:(length(x) - 1)] %>% mean %>% return
+         })
+get_temp(13, 1998, data = nnmaps)
+```
+
+#PS3
+
+## 3.a
+```{r 3.a}
+library(ggplot2)
+market <- read.csv("df_for_ml_improved_new_market.csv")
+
+market_year_USD <- market %>%
+  mutate(
+    is_outlier = (price_usd == max(price_usd))
+  )
+
+market_year_mean <- market_year_USD %>%
+  filter(!is_outlier) %>%
+  group_by(year) %>%
+  summarize(price_usd_mean = mean(price_usd))
+
+point_usd <- ggplot(market, aes(x = year, y = price_usd)) +
+  geom_point()+
+  labs(x = "year", y = "price in USD", title = "Price in USD Over Year")
+
+boxplot_usd <- ggplot(market_year_USD, aes(x=factor(year), y = price_usd))+
+  geom_boxplot()+
+  geom_text(
+    data = market_year_USD %>%
+      filter(is_outlier),
+    aes(label = price_usd),
+    vjust = -0.5, color = "red"
+  )+
+  labs(x = "Year", y = "Price (USD)", title = "Yearly Distribution of Prices")
+
+boxplot_usd_drop <- ggplot(data = market_year_USD %>% filter(!is_outlier), 
+                      mapping = aes(x=factor(year), y = price_usd))+
+  geom_boxplot()+
+  labs(x = "Year", y = "Price (USD)", title = "Yearly Distribution of Prices")
+ 
+mean_line_usd <- ggplot(data = market_year_mean,
+                        mapping=aes(x=year, y = price_usd_mean))+
+  geom_line()+
+  labs(x = "Year", y = "Mean of Price in USD", title = "Mean of Price in USD Over Year")
+
+
+
+print(point_usd)
+print(boxplot_usd)
+print(mean_line_usd)
+print(boxplot_usd_drop)
+
+```
+Because the max price in 2006 is as twice high as other max price in other years, I decide to drop the highest price in 2006. After dropping the max price, the number of anomalies is still quite high.The range of price is quite wide.
+
+In overall, the price in USD is increasing over year. The highest price appears in 2008. The anomalies are also more and more over year. The data becomes more discrete over year.
+
+## 3.b
+```{r 3.b}
+library(tidyr)
+market_long <- market %>%
+  pivot_longer(cols = starts_with("Genre"), 
+               names_to = "genre", 
+               values_to = "count") %>%
+  filter(count==1) %>%
+  mutate(genre = sub("Genre___", "",genre))
+
+genre_count_year <- market_long %>%
+  group_by(year, genre) %>%
+  summarize(sales_count = n()) %>%
+  ungroup()
+
+genre_count <- ggplot(genre_count_year, aes(x = year,y = sales_count, fill = genre))+
+  geom_bar(stat = "identity", position = "fill")+
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Year", y = "Percentage of Sales", title = "Distribution of Sales Count by Genre Across Years") +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+print(genre_count)
+
+```
+From genre distribution, we notice that percentages of sales in Sculpture and Print and Photograph are increasing over year. But Painting and Other are decreasing over year.
+
+## 3.c
+```{r 3.c}
+genre_price_year <- market_long %>%
+  group_by(year, genre) %>%
+  summarize(price_mean = mean(price_usd)) %>%
+  ungroup()
+
+genre_price <- ggplot(genre_price_year, aes(x = year,y = price_mean, fill = genre))+
+  geom_bar(stat = "identity", position = position_dodge())+
+  labs(x = "Year", y = "Mean of Price", title = "Distribution of Price Mean by Genre Across Years") +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+print(genre_price)
+```
+From genre perspective, Photography is the most expensive in 5 genres. I believe this is led by the Photography genre is the most popular art style.
+
+Over years, the price peak appears in 2008, which is consistent with the sales count peak in 3.b. Therefore, we believe the sales peak appears in 2008. And the price increases before 2008 but slightly decreases after 2008.
