@@ -15,7 +15,6 @@ format:
 ```{r 1.a.1}
 library(dplyr)
 library(nycflights13)
-head(airports)
 
 #extract the destination with the number of flights under 10
 destination_under_10 <- flights%>%
@@ -47,21 +46,20 @@ table_1
 
 ```
 
-You can add options to executable code like this 
 
 ```{r 1.a.2}
-#calculte mediunm and median of departure delay
+#calculte mediunm and median of departure delay per destination airport
 table_2 <- flights_cleaned %>%
-  group_by(origin) %>%
+  group_by(dest) %>%
   summarize(mean_delay_arr = mean(arr_delay, na.rm=TRUE), 
             median_delay_arr = median(arr_delay, na.rm=TRUE)) %>%
-  left_join(airports, by= c("origin"="faa")) %>%
+  left_join(airports, by= c("dest"="faa")) %>%
   rename(
-    origin_name = name
+    dest_name = name
   ) %>%
-  select(!c(lat, lon, alt, tz, dst, tzone, origin)) %>%
+  select(!c(lat, lon, alt, tz, dst, tzone, dest)) %>%
   arrange(-mean_delay_arr) %>%
-  select(origin_name, everything()) %>%
+  select(dest_name, everything()) %>%
   tibble
 
 table_2
@@ -98,19 +96,20 @@ speed_max_info
 ```
 
 # PS2
-```{r 2}
+```{r 2, error=TRUE}
 #' request the average temperature for a given month
 #'
 #' @param month: Month, either a numeric 1-12 or a string. 
 #' @param year: A numeric year.
 #' @param data: The data set to obtain data from.
-#' @param celsius: Logically indicating whther the results should be in celsius. Default FALSE.
+#' @param celsius: Logically indicating whether the results should be in Celsius. Default FALSE.
 #' @param average_fn: A function with which to compute the mean. Default is mean.
 #'
 #' @return a numeric vector of length 1.
 #' @export
 #'
 #' @examples
+
 get_temp <- function(month, year, data, celsius = FALSE, average_fn=mean){
   # Sanitizing the input
   # Check if the year is numeric
