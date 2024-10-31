@@ -74,15 +74,7 @@ table_2
 # calculate speed since most of speed in planes table is NA
 flights_speed <- flights %>%
   mutate(
-    dep_minute = dep_time %% 100,
-    arr_minute = arr_time %% 100,
-    dep_hour = (dep_time - dep_minute)/100,
-    arr_hour = (arr_time - arr_minute)/100,
-    #handle with overnight flights by adding 24 hours
-    duration_hour = (arr_hour-dep_hour+24) %% 24,
-    duration_minute = arr_minute - dep_minute,
-    duration = duration_hour + duration_minute/60,
-    speed = ifelse(distance/duration>0, distance/duration, NA)
+    speed = ifelse(distance/(air_time/60)>0, distance/(air_time/60), NA)
     ) 
 
 # obtain max speed and the information
