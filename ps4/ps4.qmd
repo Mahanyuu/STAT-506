@@ -53,16 +53,16 @@ table_1
 ```{r 1.a.2}
 #calculte mediunm and median of departure delay
 table_2 <- flights_cleaned %>%
-  group_by(origin) %>%
+  group_by(dest) %>%
   summarize(mean_delay_arr = mean(arr_delay, na.rm=TRUE), 
             median_delay_arr = median(arr_delay, na.rm=TRUE)) %>%
-  left_join(airports, by= c("origin"="faa")) %>%
+  left_join(airports, by= c("dest"="faa")) %>%
   rename(
-    origin_name = name
+    dep_name = name
   ) %>%
-  select(!c(lat, lon, alt, tz, dst, tzone, origin)) %>%
+  select(!c(lat, lon, alt, tz, dst, tzone)) %>%
   arrange(-mean_delay_arr) %>%
-  select(origin_name, everything()) %>%
+  select(dep_name, everything()) %>%
   tibble
 
 table_2
