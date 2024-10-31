@@ -71,7 +71,7 @@ table_2
 
 ## 1.b
 ```{r 1.b}
-# calculate speed
+# calculate speed since most of speed in planes table is NA
 flights_speed <- flights %>%
   mutate(
     dep_minute = dep_time %% 100,
