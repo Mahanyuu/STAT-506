@@ -10,9 +10,8 @@ format:
 [My Github](https://github.com/Mahanyuu/STAT-506/)
 
 
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## PS1
+### 1.a
 
 ```{r 1.a.1}
 rational <- setClass("rational",
@@ -153,7 +152,7 @@ setMethod("/", signature(e1="rational", e2="rational"),
 
 ```
 
-
+### 1.b
 ```{r 1.b.1, error=TRUE}
 r1 <- new("rational", numerator = 24, denominator = 6)
 r2 <- new("rational", numerator = 7, denominator = 230)
@@ -205,6 +204,7 @@ show(sim_2)
 sim_3 <- simplify(r3)
 show(sim_3)
 ```
+### 1.c
 ```{r 1.c.1, error=TRUE}
 #Check validity with the denominator of zero
 r5 <- new("rational", numerator = 5, denominator = 0)
@@ -214,7 +214,8 @@ r5 <- new("rational", numerator = 5, denominator = 0)
 #Check the validity with the denominator of text
 r6 <- new("rational", numerator = "text", denominator =6)
 ```
-
+## PS2
+### 2.a
 ```{r 2.a}
 art <- read.csv('../ps4/df_for_ml_improved_new_market.csv')
 art$Genre___Others[art$Genre___Painting == 1] <- 0
@@ -256,6 +257,7 @@ text(.9, 20.5, "Other", xpd = TRUE)
 mtext(side = 1, "Proportion of Genre of Art Sales", cex = 1.8)
 
 ```
+### 2.b
 ```{r 2.b.1}
 library(plotly)
 p <- plot_ly(art, x = ~ year, y = ~ price_usd,
@@ -263,7 +265,8 @@ p <- plot_ly(art, x = ~ year, y = ~ price_usd,
 p
 ```
 It looks like the average isn’t really shifting, but the outliers are changing. Note that the question did not ask about the average price, so this is still interesting. Why don’t we try only plotting the large values.
-```{r 2.b}
+
+```{r 2.b.2}
 ##' @title Subset a vector to values above some percentile
 ##' @param vec A vector of values
 ##' @param percentile A percentile to identify
@@ -293,7 +296,9 @@ p_top <- p_top %>%
   add_lines(x = artmedian$year, y = artmedian$price_usd, name = "Median Price (USD)")
 p_top
 ```
+We can notice that although the median of prices is not changing obviously, the top 5% of prices change are increasing significantly over years.
 
+### 2.c
 ```{r 2.c}
 artmedian <- aggregate(art$price_usd, by = list(art$year, art$genre),
                    FUN = median, na.rm = TRUE)
@@ -331,7 +336,8 @@ for (i in seq_along(genres)){
 p_yg
 ```
 
-
+## PS3
+### 3.a
 ```{r 3.a.1}
 #Departure
 library(nycflights13)
@@ -368,6 +374,7 @@ flights_dest <-flights[,
                                ][order(-mean_arr_delay)]
 flights_dest
 ```
+### 3.b
 ```{r 3.b}
 planes <- data.table(planes)
 flights_mph <- planes[flights, , on="tailnum"
