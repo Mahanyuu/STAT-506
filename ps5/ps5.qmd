@@ -1,0 +1,323 @@
+---
+title: "ps4"
+author: "mhanyu"
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+---
+[My Github](https://github.com/Mahanyuu/STAT-506/)
+
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r 1.a.1}
+rational <- setClass("rational",
+         slots = c(
+                   numerator = "numeric",
+                   denominator = "numeric"))
+
+```
+
+
+```{r 1.a.2}
+setValidity("rational", function(object){
+  if(object@denominator==0){
+    stop("The denominator cannot be equal to 0!")
+  }
+  if(!is.numeric(object@numerator) || !is.numeric(object@denominator)){
+    stop("Both the numerator and denominator must be numeric!")
+  }
+  return(TRUE)
+})
+```
+```{r 1.a.3}
+setGeneric("show", function(object){
+  standardGeneric("show")
+})
+setMethod("show", "rational",
+          function(object){
+    cat(object@numerator,"/", object@denominator, "\n")
+    return(invisible(object))
+  })
+
+demo <- new("rational", numerator = 1, denominator = 3)
+show(demo)
+```
+
+
+```{r 1.a.4}
+library(Rcpp)
+cppFunction('
+  int gcd(int a, int b){
+    while(b!=0){
+    int temp=b;
+    b=a%b;
+    a=temp;
+    }
+    return abs(a);
+    }
+  int lcm(int a, int b){
+    return abs(a * b)/gcd(a, b);
+  }
+')
+setGeneric("simplify", function(object) standardGeneric("simplify"))
+
+setMethod("simplify", "rational",
+          function(object){
+            gcd = gcd(object@numerator, object@denominator)
+            sim_numerator = object@numerator/gcd
+            sim_denominator = object@denominator/gcd
+            result = new("rational", numerator = sim_numerator, 
+                         denominator = sim_denominator)
+            return(result)
+          })
+```
+
+
+```{r 1.a.4}
+setGeneric("quotient", function(object, digits=8) standardGeneric("quotient"))
+
+setMethod("quotient", "rational",
+          function(object, digits=8){
+            if(!is.numeric(digits)){
+              stop("The digits must be numeric!")}
+            else{
+              result <- object@numerator/object@denominator
+              print(round(result, digits=digits))
+              return(invisible(result))
+            }
+            })
+```
+
+
+```{r 1.a.5}
+library(MASS)
+##' @title `rational` arithmetic.
+##'
+##' New object always have the color of the left-side object.
+##' @param e1 A `rational`
+##' @param e2 A `rational`
+##' @return A `rational`
+getMethod("+")
+setMethod("+", signature(e1="rational", e2="rational"),
+          function(e1, e2){
+            new_numerator <- e1@numerator*e2@denominator + e1@denominator*e2@numerator
+            new_denominator <- e1@denominator*e2@denominator
+            new_result <- new("rational", numerator = new_numerator, 
+                              denominator = new_denominator)
+            sim_result <- simplify(new_result)
+            return(sim_result)
+          })
+getMethod("-")
+setMethod("-", signature(e1="rational", e2="rational"),
+          function(e1, e2){
+            new_numerator <- e1@numerator*e2@denominator - e1@denominator*e2@numerator
+            new_denominator <- e1@denominator*e2@denominator
+            new_result <- new("rational", numerator = new_numerator, 
+                              denominator = new_denominator)
+            sim_result <- simplify(new_result)
+            return(sim_result)
+          })
+getMethod("*")
+setMethod("*", signature(e1="rational", e2="rational"),
+          function(e1, e2){
+            new_numerator <- e1@numerator*e2@numerator
+            new_denominator <- e1@denominator*e2@denominator
+            new_result <- new("rational", numerator = new_numerator,
+                               denominator = new_denominator)
+            sim_result <- simplify(new_result)
+            return(sim_result)
+          })
+getMethod("/")
+setMethod("/", signature(e1="rational", e2="rational"),
+          function(e1, e2){
+            if(e2@numerator !=0){
+              new_numerator <- e1@numerator*e2@denominator
+              new_denominator <- e1@denominator*e2@numerator
+              new_result <- new("rational", numerator = new_numerator,
+                               denominator = new_denominator)
+              sim_result <- simplify(new_result)
+              return(sim_result)
+            }
+            if(e2@numerator ==0){
+              stop("The divisor cannot be zero!")
+            }
+          })
+
+```
+
+
+```{r 1.b.1, error=TRUE}
+r1 <- new("rational", numerator = 24, denominator = 6)
+r2 <- new("rational", numerator = 7, denominator = 230)
+r3 <- new("rational", numerator = 0, denominator = 4)
+show(r1)
+show(r3)
+result_add <- r1 + r2
+show(result_add)
+
+result_sub <- r1 - r2
+show(result_sub)
+
+result_mul <- r1 * r2
+show(result_mul)
+
+result_div <- r1 / r2
+show(result_div)
+
+result_add_r3 <- r1 + r3
+show(result_add_r3)
+
+result_mul_r3 <- r1 * r3
+show(result_mul_r3)
+
+result_div_r3 <- r2 / r3
+```
+
+
+```{r 1.b.2, error=TRUE}
+quotient(r1)
+quotient(r2)
+quotient(r2, digits = 3)
+quotient(r2, digits = 3.14)
+quotient(r2, digits = "avocado")
+```
+
+```{r 1.b.3}
+q2 <- quotient(r2, digits = 3)
+q2
+quotient(r3)
+```
+```{r 1.b.4}
+sim_1 <- simplify(r1)
+show(sim_1)
+
+sim_2 <- simplify(r2)
+show(sim_2)
+
+sim_3 <- simplify(r3)
+show(sim_3)
+```
+```{r 1.c.1, error=TRUE}
+#Check validity with the denominator of zero
+r5 <- new("rational", numerator = 5, denominator = 0)
+```
+
+```{r 1.c.2, error=TRUE}
+#Check the validity with the denominator of text
+r6 <- new("rational", numerator = "text", denominator =6)
+```
+
+```{r 2.a}
+art <- read.csv('../ps4/df_for_ml_improved_new_market.csv')
+art$Genre___Others[art$Genre___Painting == 1] <- 0
+unique(art[, grep("^Genre", names(art))])
+art$genre <- "Photography"
+art$genre[art$Genre___Print == 1] <- "Print"
+art$genre[art$Genre___Sculpture == 1] <- "Sculpture"
+art$genre[art$Genre___Painting == 1] <- "Painting"
+art$genre[art$Genre___Others == 1] <- "Other"
+(yeargenre <- with(art, table(year, genre)))
+barplot(t(yeargenre), horiz = TRUE)
+```
+
+```{r 2.a.2}
+ygperc <- yeargenre/apply(yeargenre, 1, sum)
+ygperc <- ygperc[, c("Painting", "Sculpture", "Photography", "Print", "Other")]
+
+# X positions centered in each section
+xpaint <- ygperc[16,1]/2
+xsculpt <- ygperc[16,2]/2 + ygperc[16,1]
+xphoto <- ygperc[16,3]/2 + sum(ygperc[16,1:2])
+xprint <- ygperc[15, 4]/2 + sum(ygperc[15, 1:3])
+ypaint <- 18.65 # y positions obtained through trial & error
+ysculpt <- ypaint
+yphoto <- ypaint
+yprint <- 17.5
+
+
+par(mar = c(2, 3.5, 2, .2) + 0.1)
+barplot(t(ygperc), horiz = TRUE, xaxt = "n",
+        col = 2:6, las = 2)
+text(xpaint, ypaint, "Paint")
+text(xsculpt, ysculpt, "Sculpt")
+text(xphoto, yphoto, "Photograph")
+text(xprint, yprint, "Print")
+# Add arrow  for Other
+arrows(.9, 20, .997, ysculpt, xpd = TRUE, length = .15, lwd = 2)
+text(.9, 20.5, "Other", xpd = TRUE)
+mtext(side = 1, "Proportion of Genre of Art Sales", cex = 1.8)
+
+```
+```{r 2.b.1}
+library(plotly)
+p <- plot_ly(art, x = ~ year, y = ~ price_usd,
+             type = "box")
+p
+```
+It looks like the average isn’t really shifting, but the outliers are changing. Note that the question did not ask about the average price, so this is still interesting. Why don’t we try only plotting the large values.
+```{r 2.b}
+##' @title Subset a vector to values above some percentile
+##' @param vec A vector of values
+##' @param percentile A percentile to identify
+select_top_values <- function(vec, percentile) {
+  val <- quantile(vec, percentile)
+  return(vec[vec > val])
+}
+
+save <- list()
+for (y in unique(art$year)) {
+  prices <- art[art$year == y, "price_usd"]
+  save[[as.character(y)]] <-
+    data.frame(year = y,
+               price_usd = select_top_values(prices, .95))
+}
+
+# We've got a list, use `do.call` to combine them all together
+arttop <- do.call(rbind, save)
+# Let’s combine this with the median.
+artmedian <- aggregate(art$price_usd, by = list(art$year),
+                       FUN = median, na.rm = TRUE)
+names(artmedian) <- c("year", "price_usd")
+
+p_top <- plot_ly(arttop, x = ~year, y = ~price_usd, type = "box", name="TOP 5%")
+
+p_top <- p_top %>%
+  add_lines(x = artmedian$year, y = artmedian$price_usd, name = "Median Price (USD)")
+p_top
+```
+
+```{r 2.c}
+artmedian <- aggregate(art$price_usd, by = list(art$year, art$genre),
+                   FUN = median, na.rm = TRUE)
+names(artmedian) <- c("year", "genre", "price_usd")
+art975 <- aggregate(art$price_usd, by = list(art$year, art$genre),
+                   FUN = quantile, .975, na.rm = TRUE)
+names(art975) <- c("year", "genre", "price_usd")
+genres <- rev(unique(artmedian$genre))
+
+#choose a vector of colors
+color_palette <- RColorBrewer::brewer.pal(length(genres), "Set1")
+
+# Initialize an empty plotly object
+p_yg <- plot_ly()
+
+# Loop over each genre to add lines
+for (i in seq_along(genres)){
+  genre_color = color_palette[i]
+  p_yg <- p_yg %>%
+    add_trace(data=artmedian[artmedian$genre == genres[i],], 
+          x=~year, y=~price_usd, type='scatter', mode='line', name=genres[i],
+          showlegend=TRUE, line=list(color=genre_color))
+  p_yg <- p_yg %>%
+    add_trace(data=art975[art975$genre==genres[i],],
+          x=~year, y=~price_usd, type='scatter', mode='line',
+          name=genres[i], showlegend=FALSE, line=list(dash='dash', color=genre_color))
+}
+p_yg
+```
+
