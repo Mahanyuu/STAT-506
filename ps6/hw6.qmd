@@ -1,0 +1,127 @@
+---
+title: "hw6"
+author: "mhanyu"
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+---
+[My Github](https://github.com/Mahanyuu/STAT-506/)
+
+## PS1
+
+### 1.a
+
+```{r 1}
+library(DBI)
+lahman <- dbConnect(RSQLite::SQLite(), "../data/lahman_1871-2022.sqlite")
+gg <- function(query){
+  dbGetQuery(lahman, query)
+}
+dbListFields(lahman, "Fielding")
+fielding <- gg("
+   SELECT * FROM Fielding
+   ")
+dbDisconnect(lahman)
+```
+
+You can add options to executable code like this 
+
+```{r 1.a.0}
+library(dplyr)
+fielding$RF <- with(data = fielding, 3*(PO+A)/InnOuts)
+## mean
+RF_mean <- fielding %>%
+  group_by(teamID)%>%
+  summarize(mean_RF = mean(RF, na.rm=TRUE)) %>%
+  filter(is.finite(mean_RF))%>%
+  arrange(-mean_RF)
+RF_mean
+```
+
+
+```{r 1.a.1}
+## sd
+### Without any parallel processing
+strata <- unique(fielding$teamID)
+nsim <- 1000
+boot_strata <- function(strata, data){
+  bootstrap_sample <- do.call(rbind, lapply(strata, function(stratum){
+    stratum_data <- data[data$teamID==stratum, ]
+    resample <- stratum_data[sample(nrow(stratum_data), replace=TRUE), ]
+    return (data.frame(teamID = stratum, mean_RF = mean(resample$RF, na.rm=TRUE)))
+  }))
+  return(bootstrap_sample)
+}
+resc_1 <- lapply(seq_len(nsim), function(x)boot_strata(strata, fielding))
+resc_1_combined <- do.call(rbind, resc_1)
+resc_1_clean <- resc_1_combined[is.finite(resc_1_combined$mean_RF), ]
+resc_1_all <- resc_1_clean %>%
+  group_by(teamID) %>%
+  summarize(mean_1 = mean(mean_RF, na.rm=TRUE), sd_1=sd(mean_RF, na.rm=TRUE))
+```
+
+```{r 1.a.2}
+### Using parallel processing with the parallel package.
+library(parallel)
+cl <- makeCluster(detectCores()-1)
+clusterExport(cl, varlist=c("strata", "fielding", "boot_strata"))
+resc_2 <- parLapply(cl, seq_len(nsim), function(x)boot_strata(strata, fielding))
+stopCluster(cl)
+resc_2_vector <- do.call(rbind, resc_2)
+resc_2_clean <- resc_2_vector[is.finite(resc_2_vector$mean_RF), ]
+resc_2_all <- resc_2_clean %>%
+  group_by(teamID) %>%
+  summarize(mean_2 = mean(mean_RF), sd_2 = sd(mean_RF))
+```
+
+
+
+```{r 1.a.3}
+### Using futures with the future package.
+library(future)
+library(furrr)
+
+# Set up a plan for parallel computation
+plan(multisession)  # Suitable for Windows
+set.seed(123)
+# Use future-powered lapply
+resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
+resc_3_vector <- do.call(rbind, resc_3)
+resc_3_clean <- resc_3_vector[is.finite(resc_3_vector$mean_RF), ]
+resc_3_all <- resc_3_clean %>%
+  group_by(teamID) %>%
+  summarize(mean_3 = mean(mean_RF), sd_3 = sd(mean_RF))
+```
+
+
+### 1.b
+```{r 1.b}
+team_top_10 <-RF_mean[1:10, ]$teamID
+resc_1_2 <- merge(resc_1_all, resc_2_all, by = "teamID", all.x = TRUE)
+resc_all <- merge(resc_1_2, resc_3_all, by = "teamID", all.x=TRUE)
+resc_all_top_10 <- resc_all[resc_all$teamID %in% team_top_10, ]
+resc_all_top_10_order <- resc_all_top_10 %>%
+  arrange(match(teamID, team_top_10))
+resc_all_top_10_order
+```
+### 1.c
+```{r 1.c}
+system.time({
+  resc_1 <- lapply(seq_len(nsim), function(x)boot_strata(strata, fielding))
+})
+system.time({
+  cl <- makeCluster(detectCores()-1)
+  clusterExport(cl, varlist=c("strata", "fielding", "boot_strata"))
+  resc_2 <- parLapply(cl, seq_len(nsim), function(x)boot_strata(strata, fielding))
+  stopCluster(cl)
+})
+system.time({
+  plan(multisession)  # Suitable for Windows
+  set.seed(123)
+  # Use future-powered lapply
+  resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
+})
+```
+It is very obvious that execution time with lapply is the longest. With the future and parallel packages help, the time is shortened effectively. For the elapsed total time, the program without any parallel processing runs 676.72s. Using parallel processing, the program runs 159.38s. Using futures with future package, the program runs 225.59s. The program with parallel processing runs fast, and the second is future processing. They are both further faster than processing without any parallel processing.
