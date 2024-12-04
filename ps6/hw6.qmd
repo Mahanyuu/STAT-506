@@ -131,4 +131,4 @@ system.time({
   resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
 })
 ```
-It is very obvious that execution time with lapply is the longest. With the future and parallel packages help, the time is shortened effectively. For the elapsed total time, the program without any parallel processing runs 2224.80s. Using parallel processing, the program runs 352.02s. Using futures with future package, the program runs .59s. The program with parallel processing runs fast, and the second is future processing. They are both further faster than processing without any parallel processing.
+It is very obvious that execution time with lapply is the longest. With the future and parallel packages help, the time is shortened effectively. For the elapsed total time, the program without any parallel processing runs 664.86s. Using parallel processing, the program runs 167.25s. Using futures with future package, the program runs 164.86s. The program with parallel processing runs fast, and the second is future processing. They are both further faster than processing without any parallel processing.
