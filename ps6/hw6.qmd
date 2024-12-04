@@ -16,17 +16,17 @@ format:
 ```{r 1}
 library(DBI)
 lahman <- dbConnect(RSQLite::SQLite(), "../data/lahman_1871-2022.sqlite")
+
 gg <- function(query){
   dbGetQuery(lahman, query)
 }
-dbListFields(lahman, "Fielding")
+
 fielding <- gg("
    SELECT * FROM Fielding
    ")
 dbDisconnect(lahman)
 ```
 
-You can add options to executable code like this 
 
 ```{r 1.a.0}
 library(dplyr)
@@ -40,9 +40,9 @@ RF_mean <- fielding %>%
 RF_mean
 ```
 
-
+#### 1.a.1 Without any parallel processing
 ```{r 1.a.1}
-## sd
+## sd estimation 
 ### Without any parallel processing
 strata <- unique(fielding$teamID)
 nsim <- 1000
@@ -54,6 +54,8 @@ boot_strata <- function(strata, data){
   }))
   return(bootstrap_sample)
 }
+#lapply
+set.seed(789)
 resc_1 <- lapply(seq_len(nsim), function(x)boot_strata(strata, fielding))
 resc_1_combined <- do.call(rbind, resc_1)
 resc_1_clean <- resc_1_combined[is.finite(resc_1_combined$mean_RF), ]
@@ -62,11 +64,13 @@ resc_1_all <- resc_1_clean %>%
   summarize(mean_1 = mean(mean_RF, na.rm=TRUE), sd_1=sd(mean_RF, na.rm=TRUE))
 ```
 
+#### 1.a.2 Using parallel processing with the parallel package.
 ```{r 1.a.2}
 ### Using parallel processing with the parallel package.
 library(parallel)
 cl <- makeCluster(detectCores()-1)
 clusterExport(cl, varlist=c("strata", "fielding", "boot_strata"))
+set.seed(678)
 resc_2 <- parLapply(cl, seq_len(nsim), function(x)boot_strata(strata, fielding))
 stopCluster(cl)
 resc_2_vector <- do.call(rbind, resc_2)
@@ -76,8 +80,7 @@ resc_2_all <- resc_2_clean %>%
   summarize(mean_2 = mean(mean_RF), sd_2 = sd(mean_RF))
 ```
 
-
-
+#### 1.a.3 Using futures with the future package.
 ```{r 1.a.3}
 ### Using futures with the future package.
 library(future)
@@ -85,7 +88,7 @@ library(furrr)
 
 # Set up a plan for parallel computation
 plan(multisession)  # Suitable for Windows
-set.seed(123)
+set.seed(567)
 # Use future-powered lapply
 resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
 resc_3_vector <- do.call(rbind, resc_3)
@@ -94,7 +97,6 @@ resc_3_all <- resc_3_clean %>%
   group_by(teamID) %>%
   summarize(mean_3 = mean(mean_RF), sd_3 = sd(mean_RF))
 ```
-
 
 ### 1.b
 ```{r 1.b}
@@ -106,17 +108,22 @@ resc_all_top_10_order <- resc_all_top_10 %>%
   arrange(match(teamID, team_top_10))
 resc_all_top_10_order
 ```
+
 ### 1.c
 ```{r 1.c}
 system.time({
+  set.seed(124)
   resc_1 <- lapply(seq_len(nsim), function(x)boot_strata(strata, fielding))
 })
+
 system.time({
   cl <- makeCluster(detectCores()-1)
   clusterExport(cl, varlist=c("strata", "fielding", "boot_strata"))
+  set.seed(234)
   resc_2 <- parLapply(cl, seq_len(nsim), function(x)boot_strata(strata, fielding))
   stopCluster(cl)
 })
+
 system.time({
   plan(multisession)  # Suitable for Windows
   set.seed(123)
@@ -124,4 +131,4 @@ system.time({
   resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
 })
 ```
-It is very obvious that execution time with lapply is the longest. With the future and parallel packages help, the time is shortened effectively. For the elapsed total time, the program without any parallel processing runs 676.72s. Using parallel processing, the program runs 159.38s. Using futures with future package, the program runs 225.59s. The program with parallel processing runs fast, and the second is future processing. They are both further faster than processing without any parallel processing.
+It is very obvious that execution time with lapply is the longest. With the future and parallel packages help, the time is shortened effectively. For the elapsed total time, the program without any parallel processing runs 2224.80s. Using parallel processing, the program runs 352.02s. Using futures with future package, the program runs .59s. The program with parallel processing runs fast, and the second is future processing. They are both further faster than processing without any parallel processing.
