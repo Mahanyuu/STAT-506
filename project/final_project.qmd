@@ -1,0 +1,242 @@
+---
+title: "final_project"
+author: "mhanyu"
+format: html
+---
+
+## Data Cleansing
+
+
+```{r}
+#data cleaning
+library(dplyr)
+library(readxl)
+tax_21 <- read.csv("../data/Final Project Data/21in55cmcsv.csv")
+tax_20 <- read.csv("../data/Final Project Data/20in55cmcsv.csv")
+tax_19 <- read.csv("../data/Final Project Data/19in55cmcsv.csv")
+tax_18 <- read.csv("../data/Final Project Data/18in55cmagi.csv")
+tax_17 <- read.csv("../data/Final Project Data/17in54cmcsv.csv") 
+tax_16 <- read.csv("../data/Final Project Data/16in54cmcsv.csv")
+tax_15 <- read.csv("../data/Final Project Data/15in54cmcsv.csv")
+tax_14 <- read.csv("../data/Final Project Data/14in54cmcsv.csv")
+tax_13 <- read_excel("../data/Final Project Data/13in54cmcsv.xlsx")
+tax_list <- list()
+name = c("STATE", "AGI_STUB", "N1","N2", "A00100", "A18300","N18300", "A19700","N19700", "A85530", "N85530", "MARS2", "A03220","N03220", "A07240", "N07240","A07180", "N07180", "ELDERLY")
+for (i in 13:21){
+  col_name <- get(paste0("tax_", i))
+  names(col_name) <- toupper(colnames(col_name))
+  col_subset <- col_name[, colnames(col_name) %in% name]
+  col_subset$YEAR <- as.numeric(paste0("20", i))
+  tax_list[[i-12]] <- col_subset
+}
+
+##add tax_13, tax_14 with NA
+tax_list[[1]]$ELDERLY <- NA
+tax_list[[2]]$ELDERLY <- NA
+
+tax_sub <- do.call(rbind, tax_list)
+# name[!name %in% colnames(tax_list[[1]]) ]
+tax_sub_num <- tax_sub[, !colnames(tax_sub) %in% c("STATE","AGI_STUB", "YEAR")]
+for(col in colnames(tax_sub_num)){
+  tax_sub[[col]] <- as.numeric(gsub(",", "", tax_sub[[col]]))
+}
+
+#data mulnipulation
+
+tax_sub$marriage_rate <- with(tax_sub, MARS2/N1)
+tax_sub$total_income <- with(tax_sub, A00100*N1)
+tax_sub$elderly_rate <- with(tax_sub, ELDERLY/N1)
+
+tax_2013 <- tax_sub[tax_sub$YEAR == 2013, ]
+tax_2015 <- tax_sub[tax_sub$YEAR == 2015, ]
+merge_data_1 <- merge(tax_2013, tax_2015[, c("STATE", "elderly_rate", "AGI_STUB")], by=c("STATE","AGI_STUB"), suffixes =c("_2013", "_2015"),all.x=TRUE )
+tax_sub[tax_sub$YEAR==2013, "elderly_rate"] <- merge_data_1$elderly_rate_2015
+
+tax_2014 <- tax_sub[tax_sub$YEAR == 2014, ]
+merge_data_2 <- merge(tax_2014, tax_2015[, c("STATE", "elderly_rate", "AGI_STUB")], by=c("STATE","AGI_STUB"), suffixes =c("_2013", "_2015"),all.x=TRUE )
+tax_sub[tax_sub$YEAR==2014, "elderly_rate"] <- merge_data_2$elderly_rate_2015
+
+tax_sub$tax <- with(tax_sub, A18300)
+tax_sub$charit <- with(tax_sub, A19700)
+tax_sub$add_med <- with(tax_sub, A85530)
+tax_sub$edu <- with(tax_sub, A03220)
+tax_sub$retire <- with(tax_sub, A07240)
+tax_sub$child <- with(tax_sub, as.numeric(A07180))
+
+##A00100: Adjust gross income (AGI) 
+##A18300: Taxes paid amount, N18300
+#A19700: Total charitable contributions amount
+##A85530: Additional Medicare tax
+###ELDERLY: Number of elderly returns
+##N1: Number of returns
+##MARS2: Number of joint returns, Filing status is married filing jointly
+### A03220: Educator expenses amount
+## A07240: Retirement savings contribution credit amount
+## A07180: Child and dependent care credit amount
+colnames(tax_sub)
+tax_sub
+tax_sub_state <- tax_sub %>%
+  group_by(STATE, YEAR) %>%
+  summarise(
+    AGI = sum(total_income) / sum(N1),
+    marriage_rate = sum(marriage_rate * N1, na.rm = TRUE) / sum(N1, na.rm = TRUE),
+    elder_rate = sum(elderly_rate * N1, na.rm = TRUE) / sum(N1, na.rm = TRUE),
+    tax = sum(tax * N1) / sum(N1),
+    charity = sum(charit * N1) / sum(N1),
+    add_med = sum(add_med * N1) / sum(N1),
+    edu = sum(edu * N1) / sum(N1),
+    retire = sum(retire * N1) / sum(N1),
+    child = sum(child * N1) / sum(N1),
+    population = sum(N1)  # Corrected the typo here
+  ) %>%
+  ungroup()
+
+```
+
+```{r Enrollment}
+enroll <- read.csv("../data/Final Project Data/Medicare_Monthly_Enrollment_Aug_2024.csv")
+enroll <- enroll[enroll['MONTH']=="Year" & enroll$BENE_GEO_LVL=="State", ]
+enroll$growth_rate = with(enroll,
+                        (as.numeric(TOT_BENES)-as.numeric(ORGNL_MDCR_BENES))
+                        /as.numeric(ORGNL_MDCR_BENES))
+
+enroll <- enroll[, c("YEAR", "BENE_STATE_ABRVTN", "growth_rate")]
+names(enroll) <- c("YEAR", "STATE", "growth_rate")
+data_ttl <- merge(tax_sub_state, enroll, by=c("STATE", "YEAR"), all.x=TRUE)
+data_ttl <- data_ttl[data_ttl$STATE!="PR", ]
+data_ttl <- data_ttl[complete.cases(data_ttl),]
+write.csv(data_ttl, "file_name.csv", row.names = FALSE)
+```
+
+
+```{r Enrollment}
+library(ggplot2)
+library(dplyr)
+library(usmap)
+png("growth_rate.png", width = 500, height = 300)
+# Plot map with growth rate data
+map_plot <- data_ttl %>%
+  group_by(STATE) %>%
+  summarise(avg_growth_rate = mean(growth_rate))%>%
+  rename(state=STATE)
+
+plot_usmap(data = map_plot, values = "avg_growth_rate", lines = "black") +
+  scale_fill_continuous(
+    low = "white", high = "blue", name = "Growth Rate"
+  ) +
+  labs(title = "Average Growth Rate by State") +
+  theme(legend.position = "right")
+
+```
+
+```{r summary data}
+library(tidyverse)
+library(xtable)
+summary_xtable <- xtable(summary(rbind(data_ttl[,c(-1,-2)])))
+print(xtable(summary_xtable), type = "latex", file = "summary_results.tex")
+```
+
+
+```{r statistical inference}
+library(xtable)
+library(lme4)
+data_scaled <- data_ttl %>%
+  mutate(across(c(-STATE, -YEAR), scale))
+
+model_lm <- lm(growth_rate~.-YEAR, data = data_ttl)
+model_lme <- lmer(growth_rate ~ AGI + marriage_rate + elder_rate + tax + charity + add_med + edu + retire + child +population + (1 | (STATE)), data = data_scaled)
+summary(model_lm)
+summary(model_lme)
+# Extract fixed effects
+fixed_effects <- data.frame(summary(model_lme)$coefficients)
+
+# Extract random effects
+random_effects <- data.frame(summary(model_lme)$varcor)
+
+#Transform the table into latex format
+fixed_effects_xtable <- xtable(fixed_effects)
+print(fixed_effects_xtable, type = "latex", file = "model_results.tex")
+```
+
+
+```{r machine learning prediction model}
+library(randomForest)
+library(caret)
+
+data_scaled_clean <- data_scaled %>% filter(!is.na(growth_rate))
+data_scaled_clean$STATE <- as.factor(data_scaled_clean$STATE)
+set.seed(456)
+train_index <- createDataPartition(data_scaled_clean$growth_rate, p = 0.8, list = FALSE)
+train_data <- data_scaled_clean[train_index, ]
+test_data <- data_scaled_clean[-train_index, ]
+# Train the random forest model
+encoded_data <- model.matrix(~ STATE-1, data = train_data)
+encoded_data <- as.data.frame(encoded_data)
+train_data <- train_data[, !names(train_data) %in% "STATE"]
+train_data <- cbind(train_data, encoded_data)
+
+encoded_test <- model.matrix(~ STATE-1, data = test_data)
+encoded_test <- as.data.frame(encoded_test)
+test_data <- test_data[, !names(test_data) %in% "STATE"]
+test_data <- cbind(test_data, encoded_test)
+```
+
+```{r lm}
+lm<- lm(growth_rate ~ .-YEAR, data = train_data)
+predict_lm <- predict(lm, test_data)
+actual <- test_data$growth_rate
+mean <- mean(actual)
+osr_lm <- 1-sum((predict_lm-actual)^2)/sum((actual-mean)^2)
+osr_lm
+```
+```{r svm}
+library(e1071)
+svm <- svm(growth_rate ~ .-YEAR, data = train_data)
+predict_svm <- predict(svm, test_data)
+osr_svm <- 1-sum((predict_svm-actual)^2)/sum((actual-mean)^2)
+osr_svm
+```
+
+```{r XGBoot}
+library(xgboost)
+model_xgb <- xgboost(data = as.matrix(train_data[,-1]), label = train_data$growth_rate, nrounds = 100, objective = "reg:squarederror")
+predict_xgb <- predict(model_xgb, as.matrix(test_data[,-1]))
+ors_xgb <- 1-sum((predict_xgb-actual)^2)/sum((actual-mean)^2)
+ors_xgb
+```
+
+
+```{r machine learning prediction model}
+set.seed(123)
+rf_model <- randomForest( growth_rate~.-YEAR,
+                          data=train_data,
+                         importance = TRUE)
+print(rf_model)
+
+predictions <- predict(rf_model, test_data)
+train_mean <- mean(train_data$growth_rate)
+actual <- test_data$growth_rate
+rsq_full <- 1-sum((predictions-actual)^2)/sum((actual-train_mean)^2)
+rsq_full
+```
+From the left plot, I understand that STATE and marriage_rate are the most important two variables.
+
+```{r}
+importance_scores <- importance(rf_model)
+selected_feature <- rownames(importance_scores[order(-importance_scores[, 1]), ])
+top_feature <- selected_feature[1:10]
+top_feature
+train_data_red <- train_data[, c("growth_rate", top_feature)]
+test_data_red <- test_data[, c("growth_rate", top_feature)]
+set.seed(56788)
+rf_model_red <- randomForest(growth_rate~., 
+                         data = train_data_red, 
+                         importance = TRUE)
+predictions_red <- predict(rf_model_red, test_data_red)
+actual <- test_data$growth_rate
+predictions_red <- predictions_red
+
+rsq_red <- 1-sum((predictions_red-actual)^2)/sum((actual-mean(train_data_red$growth_rate))^2)
+rsq_red
+```
+After feature engineering, rsq reduced so we still choose the full random forest model for prediction.

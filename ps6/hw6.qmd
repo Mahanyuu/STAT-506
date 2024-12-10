@@ -30,7 +30,9 @@ dbDisconnect(lahman)
 
 ```{r 1.a.0}
 library(dplyr)
+fielding <- fielding[fielding$InnOuts!=0, ]
 fielding$RF <- with(data = fielding, 3*(PO+A)/InnOuts)
+
 ## mean
 RF_mean <- fielding %>%
   group_by(teamID)%>%
@@ -45,23 +47,39 @@ RF_mean
 ## sd estimation 
 ### Without any parallel processing
 strata <- unique(fielding$teamID)
-nsim <- 1000
+nsim <- 2
+
+#' Title return the mean of bootstrap resample per stratum
+#'
+#' @param strata input the unique strata to the function
+#' @param data input the data frame
+#'
+#' @return the mean of bootstrap resample per stratum
+
+
 boot_strata <- function(strata, data){
-  bootstrap_sample <- do.call(rbind, lapply(strata, function(stratum){
+  n <- length(strata)
+  bootstrap_sample <- data.frame(teamID = character(n), mean_RF = numeric(n))
+  
+  for (i in seq_along(strata)){
+    stratum <- strata[[i]]
     stratum_data <- data[data$teamID==stratum, ]
     resample <- stratum_data[sample(nrow(stratum_data), replace=TRUE), ]
-    return (data.frame(teamID = stratum, mean_RF = mean(resample$RF, na.rm=TRUE)))
-  }))
+    bootstrap_sample[i, ] <- c(stratum, mean(resample$RF, na.rm =TRUE))
+  }
+  
   return(bootstrap_sample)
 }
+
 #lapply
 set.seed(789)
 resc_1 <- lapply(seq_len(nsim), function(x)boot_strata(strata, fielding))
 resc_1_combined <- do.call(rbind, resc_1)
-resc_1_clean <- resc_1_combined[is.finite(resc_1_combined$mean_RF), ]
-resc_1_all <- resc_1_clean %>%
+resc_1_combined$mean_RF <- as.numeric(resc_1_combined$mean_RF)
+resc_1_all <- resc_1_combined %>%
   group_by(teamID) %>%
   summarize(mean_1 = mean(mean_RF, na.rm=TRUE), sd_1=sd(mean_RF, na.rm=TRUE))
+resc_1_all
 ```
 
 #### 1.a.2 Using parallel processing with the parallel package.
@@ -74,7 +92,7 @@ set.seed(678)
 resc_2 <- parLapply(cl, seq_len(nsim), function(x)boot_strata(strata, fielding))
 stopCluster(cl)
 resc_2_vector <- do.call(rbind, resc_2)
-resc_2_clean <- resc_2_vector[is.finite(resc_2_vector$mean_RF), ]
+resc_2_clean <- resc_2_vector[is.finite(as.numeric(resc_2_vector$mean_RF)), ]
 resc_2_all <- resc_2_clean %>%
   group_by(teamID) %>%
   summarize(mean_2 = mean(mean_RF), sd_2 = sd(mean_RF))
@@ -92,7 +110,7 @@ set.seed(567)
 # Use future-powered lapply
 resc_3 <- suppressWarnings(future_map(seq_len(nsim), function(x) boot_strata(strata, fielding)))
 resc_3_vector <- do.call(rbind, resc_3)
-resc_3_clean <- resc_3_vector[is.finite(resc_3_vector$mean_RF), ]
+resc_3_clean <- resc_3_vector[is.finite(as.numeric(resc_3_vector$mean_RF)), ]
 resc_3_all <- resc_3_clean %>%
   group_by(teamID) %>%
   summarize(mean_3 = mean(mean_RF), sd_3 = sd(mean_RF))
